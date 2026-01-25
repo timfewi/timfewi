@@ -22,5 +22,3 @@ I'm a software developer from Austria: by day I build enterprise apps with Angul
 ## Let's Connect
 
 I'm always interested in collaborating on interesting projects or discussing tech. Feel free to reach out!
-
----
