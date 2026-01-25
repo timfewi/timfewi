@@ -4,9 +4,9 @@ I'm a software developer from Austria: by day I build enterprise apps with Angul
 
 ## What I'm Up To
 
-▸ Building production-quality side projects to gear up for business ventures
-▸ Working with Tauri & Rust for cross-platform desktop applications  
-▸ Exploring AI-powered development tools and workflows  
+- Building production-quality side projects to gear up for business ventures
+- Working with Tauri & Rust for cross-platform desktop applications  
+- Exploring AI-powered development tools and workflows  
 
 ## Tech Stack
 
