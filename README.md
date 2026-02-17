@@ -10,7 +10,7 @@ I'm a software developer from Austria: by day I build enterprise apps with Angul
 
 ## Tech Stack
 
-[![My Skills](https://skillicons.dev/icons?i=ts,rust,py,go,cs,dotnet,postgres,angular,vue,react,nuxtjs,nextjs,tauri,bun,js,html,css,tailwind,docker,postman,bash,linux)](https://skillicons.dev)
+[![My Skills](https://skillicons.dev/icons?i=ts,rust,nix,py,go,cs,dotnet,postgres,angular,vue,react,nuxtjs,nextjs,tauri,bun,js,tailwind,docker,postman,bash,linux)](https://skillicons.dev)
 
 ## Current Focus
 
