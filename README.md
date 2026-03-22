@@ -2,10 +2,8 @@
   <img src="./assets/banner.png" alt="Tim portfolio-style GitHub README banner" width="100%" />
 </p>
 
-<h1 align="center">Tim</h1>
-
 <p align="center">
-  Full-stack developer from Austria building production-ready software across web, backend, mobile, AI workflows, and developer infrastructure.
+  <img src="./assets/lets-connect.png" alt="Let's connect and build something amazing together" width="100%" />
 </p>
 
 <p align="center">
@@ -15,11 +13,6 @@
   ·
   <a href="https://www.linkedin.com/in/timfewi/">LinkedIn</a>
 </p>
-
-<p align="center">
-  <img src="./assets/lets-connect.png" alt="Let's connect and build something amazing together" width="100%" />
-</p>
-
 ## Current Focus
 
 - Shipping polished products with a strong frontend experience and solid backend foundations.
