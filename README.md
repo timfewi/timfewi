@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/readme-hero.svg" alt="Tim portfolio-style GitHub README banner" width="100%" />
+  <img src="./assets/banner.png" alt="Tim portfolio-style GitHub README banner" width="100%" />
 </p>
 
 <h1 align="center">Tim</h1>
