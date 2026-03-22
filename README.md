@@ -9,11 +9,15 @@
 </p>
 
 <p align="center">
-  <a href="https://timwitter.com/">Website</a>
+  <a href="https://timwitter.com/">Portfolio</a>
   ·
-  <a href="mailto:hello@timwitter.at">Email</a>
+  <a href="mailto:hello@timwitter.com">Email</a>
   ·
   <a href="https://www.linkedin.com/in/timfewi/">LinkedIn</a>
+</p>
+
+<p align="center">
+  <img src="https://github-readme-activity-graph.vercel.app/graph?username=timfewi&theme=react-dark&hide_border=true&bg_color=0d1117&color=8b949e&line=58a6ff&point=f778ba&area=true&area_color=1f6feb" alt="GitHub activity graph for timfewi" width="100%" />
 </p>
 
 ## Current Focus
@@ -78,6 +82,6 @@
 If you are building something ambitious and want someone who can move across product, frontend, backend, and infrastructure without losing quality, let's talk.
 
 - Website: `https://timwitter.com/`
-- Email: `hello@timwitter.at`
+- Email: `hello@timwitter.com`
 - Freelancer SaaS: `https://freelancerino.vercel.app/`
 - LinkedIn: `https://www.linkedin.com/in/timfewi/`
