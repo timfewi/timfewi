@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="https://github-readme-activity-graph.vercel.app/graph?username=timfewi&theme=react-dark&hide_border=true&bg_color=0d1117&color=8b949e&line=58a6ff&point=f778ba&area=true&area_color=1f6feb" alt="GitHub activity graph for timfewi" width="100%" />
+  <img src="./assets/delivery-timeline.svg" alt="Delivery timeline graphic" width="100%" />
 </p>
 
 ## Current Focus
