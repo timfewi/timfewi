@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/delivery-timeline.svg" alt="Delivery timeline graphic" width="100%" />
+  <img src="./assets/lets-connect.png" alt="Let's connect and build something amazing together" width="100%" />
 </p>
 
 ## Current Focus
