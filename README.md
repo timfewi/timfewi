@@ -9,9 +9,9 @@
 <p align="center">
   <a href="https://timwitter.com/">Portfolio</a>
   ·
-  <a href="mailto:hello@timwitter.com">Email</a>
-  ·
   <a href="https://www.linkedin.com/in/timfewi/">LinkedIn</a>
+  ·
+  <a href="mailto:hello@timwitter.com">Email</a>
 </p>
 ## Current Focus
 
