@@ -76,5 +76,4 @@ If you are building something ambitious and want someone who can move across pro
 
 - Website: `https://timwitter.com/`
 - Email: `hello@timwitter.com`
-- Freelancer SaaS: `https://freelancerino.vercel.app/`
 - LinkedIn: `https://www.linkedin.com/in/timfewi/`
