@@ -24,6 +24,7 @@
 <p>
   <img alt="Rust" src="https://img.shields.io/badge/Rust-0f172a?style=for-the-badge&logo=rust&logoColor=ffffff&labelColor=0b1220" />
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-0f172a?style=for-the-badge&logo=typescript&logoColor=3178c6&labelColor=0b1220" />
+  <img alt="Shell" src="https://img.shields.io/badge/Shell-0f172a?style=for-the-badge&logo=gnubash&logoColor=4eaa25&labelColor=0b1220" />
   <img alt="NixOS" src="https://img.shields.io/badge/NixOS-0f172a?style=for-the-badge&logo=nixos&logoColor=7ebae4&labelColor=0b1220" />
   <img alt="C Sharp" src="https://img.shields.io/badge/C%23%20%2F%20.NET-0f172a?style=for-the-badge&logo=dotnet&logoColor=8b5cf6&labelColor=0b1220" />
 </p>
