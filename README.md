@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="./assets/banner.png" alt="Tim portfolio-style GitHub README banner" width="100%" />
-</p>
-
-<p align="center">
   <img src="./assets/lets-connect.png" alt="Let's connect and build something amazing together" width="100%" />
 </p>
 
