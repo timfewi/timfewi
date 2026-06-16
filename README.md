@@ -9,7 +9,8 @@
   ·
   <a href="mailto:hello@timwitter.com">Email</a>
 </p>
-## Current Focus
+
+## Current 
 
 - Shipping polished products with a strong frontend experience and solid backend foundations.
 - Building with `Rust`, `TypeScript`, `.NET`, and reproducible `NixOS`-based environments.
