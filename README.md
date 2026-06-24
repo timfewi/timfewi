@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://timwitter.com/">Portfolio</a>
+  <a href="https://timwitter.com/">Website</a>
   ·
   <a href="https://www.linkedin.com/in/timfewi/">LinkedIn</a>
   ·
