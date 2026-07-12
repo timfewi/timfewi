@@ -1,93 +1,74 @@
 <p align="center">
-  <a href="https://timwitter.com/">Website</a>
-  ·
-  <a href="https://www.linkedin.com/in/timfewi/">LinkedIn</a>
-  ·
-  <a href="mailto:hello@timwitter.com">Email</a>
+  <img src="./assets/github-readme-header.png" alt="Tim Witter — Product Engineering, AI Systems and Open Source" width="100%" />
 </p>
 
-## Current
-
-- Building reproducible infrastructure across the full stack — **NixOS** flakes to browser.
-- Systems engineered declaratively: NixOS modules, agenix-encrypted secrets, multi-host flake wiring.
-- Orchestrating **Hermes AI agents** on NixOS — declarative agent configs, MCP servers, provider pools, systemd-hardened runtimes.
-- Full-stack engineering grounded in infra reality: `Rust`, `TypeScript`, `.NET` — all devShell'd and reproducible via flake.
-
-## Core Stack
-
-<p>
-  <img alt="NixOS" src="https://img.shields.io/badge/NixOS-0f172a?style=for-the-badge&logo=nixos&logoColor=7ebae4&labelColor=0b1220" />
-  <img alt="Nix" src="https://img.shields.io/badge/Nix-0f172a?style=for-the-badge&logo=nixos&logoColor=7ebae4&labelColor=0b1220" />
-  <img alt="Rust" src="https://img.shields.io/badge/Rust-0f172a?style=for-the-badge&logo=rust&logoColor=ffffff&labelColor=0b1220" />
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-0f172a?style=for-the-badge&logo=typescript&logoColor=3178c6&labelColor=0b1220" />
-  <img alt="Shell" src="https://img.shields.io/badge/Shell-0f172a?style=for-the-badge&logo=gnubash&logoColor=4eaa25&labelColor=0b1220" />
-  <img alt="C Sharp" src="https://img.shields.io/badge/C%23%20%2F%20.NET-0f172a?style=for-the-badge&logo=dotnet&logoColor=8b5cf6&labelColor=0b1220" />
+<p align="center">
+  <strong>Software & AI engineer building production-ready products, agent infrastructure, and open-source tools.</strong>
+  <br />
+  Based in Vienna. Working from product idea to architecture, implementation, deployment, and operation.
 </p>
 
-<p>
-  <img alt="Agenix" src="https://img.shields.io/badge/agenix-0f172a?style=for-the-badge&labelColor=0b1220&color=5277c3" />
-  <img alt="Docker" src="https://img.shields.io/badge/Docker-0f172a?style=for-the-badge&logo=docker&logoColor=2496ed&labelColor=0b1220" />
-  <img alt="Tailscale" src="https://img.shields.io/badge/Tailscale-0f172a?style=for-the-badge&logo=tailscale&logoColor=242424&labelColor=0b1220" />
-  <img alt="Home Manager" src="https://img.shields.io/badge/Home%20Manager-0f172a?style=for-the-badge&logo=nixos&logoColor=e65c00&labelColor=0b1220" />
-  <img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub%20Actions-0f172a?style=for-the-badge&logo=githubactions&logoColor=2088ff&labelColor=0b1220" />
-  <img alt="OpenRouter" src="https://img.shields.io/badge/OpenRouter-0f172a?style=for-the-badge&logo=openrouter&logoColor=ffffff&labelColor=0b1220" />
-</p>
-
-## Frontend
-
-<p>
-  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-111827?style=for-the-badge&logo=nextdotjs&logoColor=ffffff&labelColor=0b1220" />
-  <img alt="React" src="https://img.shields.io/badge/React-111827?style=for-the-badge&logo=react&logoColor=61dafb&labelColor=0b1220" />
-  <img alt="Vue.js" src="https://img.shields.io/badge/Vue.js-111827?style=for-the-badge&logo=vuedotjs&logoColor=42b883&labelColor=0b1220" />
-  <img alt="Angular" src="https://img.shields.io/badge/Angular-111827?style=for-the-badge&logo=angular&logoColor=dd0031&labelColor=0b1220" />
-  <img alt="Astro" src="https://img.shields.io/badge/Astro-111827?style=for-the-badge&logo=astro&logoColor=ff5d01&labelColor=0b1220" />
-  <img alt="Nuxt" src="https://img.shields.io/badge/Nuxt-111827?style=for-the-badge&logo=nuxt&logoColor=00dc82&labelColor=0b1220" />
-</p>
-
-## What I Build
+## What I build
 
 <table>
   <tr>
-    <td valign="top" width="50%">
-      <strong>NixOS Infrastructure & Agent Orchestration</strong><br />
-      Multi-host flake wiring with shared module overlays. <code>agenix</code>-encrypted secrets — never in store. Hermes AI agents as systemd units with declarative profile config. Home Manager as user-scope boundary. Flake-based dev shells pinning exact toolchains. Custom NixOS modules for hermetic agent runtimes. Infrastructure from code, not clicks.
+    <td valign="top" width="33%">
+      <strong>Product Engineering</strong><br /><br />
+      Software products and internal tools that move from a clear problem to a system people can actually use, deploy, and maintain.
     </td>
-    <td valign="top" width="50%">
-      <strong>AI Agent Infrastructure</strong><br />
-      Deploy multi-agent AI systems on NixOS — isolated Hermes agents, RAG pipelines, LLM-integrated production services. Build retrieval-augmented workflows, custom agent orchestration layers, semantic caching, and AI automation pipelines for real-world infra, not demos.
+    <td valign="top" width="33%">
+      <strong>AI Systems</strong><br /><br />
+      Agent orchestration, retrieval workflows, MCP integrations, and practical automations designed for real operational constraints.
     </td>
-  </tr>
-  <tr>
-    <td valign="top" width="50%">
-      <strong>Full-Stack Engineering</strong><br />
-      Rust, TypeScript, .NET — frontend to backend to deployment. Full-stack roots mean infra decisions stay grounded in product reality. Ship what you build.
-    </td>
-    <td valign="top" width="50%">
-      <strong>Mobile & Web3</strong><br />
-      Cross-platform apps with React Native and Expo, plus Solana ecosystem work involving wallets, token flows, compressed NFTs, Bubblegum, Helius RPC, and on-chain integrations that move beyond standard app patterns.
+    <td valign="top" width="33%">
+      <strong>Reproducible Infrastructure</strong><br /><br />
+      Declarative NixOS environments, isolated runtimes, encrypted secrets, and deployment workflows that remain understandable over time.
     </td>
   </tr>
 </table>
 
-## How I Build
+## Featured open source
 
-- Reproducibility first: every environment is a flake, every deploy is a derivation.
-- Declarative over imperative: config as code, systems as function of inputs.
-- Full-stack awareness: infra choices serve product outcomes, not abstractions.
-- Automation as habit: if it happens twice, it's a pipeline.
-- Auditability by default: secrets encrypted, builds cacheable, state minimal.
+| Project | What it does | Core technologies |
+| --- | --- | --- |
+| **[Tentaflake](https://github.com/timfewi/tentaflake)** | A NixOS flake for deploying and managing multiple isolated Hermes and ZeroClaw agents on one self-hosted machine. | NixOS, Nix, Docker |
+| **[lazy-allrounder](https://github.com/timfewi/lazy-allrounder)** | Cross-platform voice AI for dictation, reading, summarization, explanation, and speech workflows through a GUI and CLI. | Rust, egui, OpenRouter |
+| **[git-dashboard](https://github.com/timfewi/git-dashboard)** | A terminal dashboard for monitoring and synchronizing Git repositories across multiple machines. | Rust, ratatui, libgit2 |
 
-## What I Contribute
+## Current focus
 
-- **Open-source NixOS configurations** — production-grade flake layouts, module patterns, agenix workflows. See <a href="https://github.com/timfewi/nixos-agent-orchestration">nixos-agent-orchestration</a>.
-- **Hermes agent orchestration on NixOS** — declarative agent definitions, MCP server integration, systemd-hardened runtimes. Reference architecture in <a href="https://github.com/timfewi/nixos-agent-config">agent-config</a>.
-- **Flake templates and patterns** — reproducible dev shells, cross-host module sharing, secrets management blueprints.
-- **Nix ecosystem advocacy** — infra-from-code philosophy, flake reproducibility, agent-infrastructure convergence.
+- Making self-hosted AI-agent infrastructure easier to deploy, inspect, and operate.
+- Building focused cross-platform tools that remove friction from real engineering workflows.
+- Connecting product engineering with MCP, retrieval, automation, and reproducible deployment.
+- Publishing practical open-source systems instead of isolated demos.
 
-## Reach Out
+## Core tools
 
-If you need someone who can design your infrastructure with the same care as your product — from NixOS provisioning to frontend pixels — let's talk.
+<p>
+  <img alt="NixOS" src="https://img.shields.io/badge/NixOS-15130e?style=flat-square&logo=nixos&logoColor=7ebae4" />
+  <img alt="Rust" src="https://img.shields.io/badge/Rust-15130e?style=flat-square&logo=rust&logoColor=ffffff" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-15130e?style=flat-square&logo=typescript&logoColor=3178c6" />
+  <img alt=".NET" src="https://img.shields.io/badge/.NET-15130e?style=flat-square&logo=dotnet&logoColor=c47ae8" />
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-15130e?style=flat-square&logo=docker&logoColor=2496ed" />
+  <img alt="Astro" src="https://img.shields.io/badge/Astro-15130e?style=flat-square&logo=astro&logoColor=bf5628" />
+  <img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub_Actions-15130e?style=flat-square&logo=githubactions&logoColor=5b4ee5" />
+  <img alt="Linux" src="https://img.shields.io/badge/Linux-15130e?style=flat-square&logo=linux&logoColor=f4f0e7" />
+</p>
 
-- Website: `https://timwitter.com/`
-- Email: `hello@timwitter.com`
-- LinkedIn: `https://www.linkedin.com/in/timfewi/`
+## How I work
+
+- Start with the business or user problem, not the fashionable tool.
+- Treat prototypes as validation steps, not as finished products.
+- Design systems for deployment, observability, maintenance, and handover.
+- Prefer reproducible and auditable environments over undocumented manual state.
+- Reduce complexity instead of hiding it behind another abstraction.
+
+## Work with me
+
+I work with product teams and DACH businesses on software products, internal tools, AI automation, and production-ready agent systems.
+
+<p>
+  <a href="https://timwitter.com/"><strong>Explore my work</strong></a>
+  ·
+  <a href="mailto:hello@timwitter.com"><strong>Start a conversation</strong></a>
+</p>
