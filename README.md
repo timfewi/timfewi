@@ -32,8 +32,8 @@
 | Project | What it does | Core technologies |
 | --- | --- | --- |
 | **[Tentaflake](https://github.com/timfewi/tentaflake)** | A NixOS flake for deploying and managing multiple isolated Hermes and ZeroClaw agents on one self-hosted machine. | NixOS, Nix, Docker |
+| **[Igris Guardian](https://github.com/timfewi/igris-guardian)** | A capability-bounded prompt-injection firewall for agent systems — verdict-only, self-protecting, and deployable anywhere. | Rust, NixOS, TypeScript |
 | **[lazy-allrounder](https://github.com/timfewi/lazy-allrounder)** | Cross-platform voice AI for dictation, reading, summarization, explanation, and speech workflows through a GUI and CLI. | Rust, egui, OpenRouter |
-| **[git-dashboard](https://github.com/timfewi/git-dashboard)** | A terminal dashboard for monitoring and synchronizing Git repositories across multiple machines. | Rust, ratatui, libgit2 |
 
 ## Current focus
 
