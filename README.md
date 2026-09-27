@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Independent software &amp; AI systems engineer in Vienna.</strong><br />
-  I build web applications, integrate AI systems, and improve the infrastructure behind them.
+  I build the infrastructure that lets AI agents do real work — isolated, declarative and verifiable.
 </p>
 
 <p align="center">
@@ -19,71 +19,91 @@
 
 ---
 
-## What I do
-
-I connect the pieces that make software work — building something new, working inside an existing codebase, or improving the systems it runs on.
-
-| | |
-| --- | --- |
-| **Web engineering** | Websites, web applications, APIs and integrations. |
-| **App development** | Product interfaces, application logic and backend services. |
-| **AI systems &amp; infrastructure** | Model APIs, agent workflows, and the execution environments around them. |
-| **Systems engineering** | Linux &amp; NixOS, automation, and reproducible development environments. |
-
-`Rust` · `Python` · `TypeScript` · `Go` · `Bash` · `Linux` · `NixOS`
-
-## Ways to work together
-
-- **Project delivery** — an agreed scope and milestones through implementation and handover.
-- **Hourly support** — targeted implementation, debugging, integrations and improvements.
-- **Embedded contracting** — joining your team, workflow and conventions for ongoing work.
-
 ## Open source
 
 ### [Tentaflake](https://github.com/timfewi/tentaflake)
 
 **Declaratively deploy and manage multiple isolated AI agents on a single NixOS machine — each with its own secrets, skills, and personality.**
 
+Agents run as OCI containers supervised by systemd. Around them: a Rust operator CLI, an opt-in policy broker for model and fetch egress, a disposable no-egress tool worker, signed-image start gates and encrypted backups — plus an installer ISO to bring up the host.
+
 > Autonomy should increase capability, not implicit authority.
 
-`NixOS` · `Rust` · `isolated runtimes` · `brokered egress` · `audit trails`
+`NixOS` · `Rust` · `OCI containers` · `brokered egress` · `pre-1.0`
 
 [Repository](https://github.com/timfewi/tentaflake) · [Documentation](https://docs.tentaflake.dev/) · [Website](https://tentaflake.dev/)
 
-### Free harness tools
+### [MemoryCreep](https://github.com/timfewi/memorycreep)
 
-Small, focused building blocks for agent-assisted engineering — sandboxed runtimes, reproducible tooling, and verification for agent workflows:
+**Hardened NixOS workstation for policy-bound, AI-assisted pentesting and isolated malware analysis.**
 
-| Project | Purpose | Core |
-| --- | --- | --- |
-| **[agent-runtime-nix](https://github.com/timfewi/agent-runtime-nix)** | Sandboxed NixOS runtime for coding agents: unprivileged sessions, an exact-destination model proxy, a bounded build broker and an offline MicroVM builder. | NixOS · Rust |
-| **[architecture-kit](https://github.com/timfewi/architecture-kit)** | Specification and verification kit for portable agent systems: profiles, tool contracts, runtime boundaries and evidence requirements. | specs · schemas |
-| **[agent-toolbox-nix](https://github.com/timfewi/agent-toolbox-nix)** | Pinned, modular tool environment and single-argv toolbox for coding agents. | Nix |
-| **[ast-index-nix](https://github.com/timfewi/ast-index-nix)** | Local-first AST code index and query service for agent harnesses. | Rust |
-| **[project-check-nix](https://github.com/timfewi/project-check-nix)** | Portable, argv-only project verification runner driven by a per-repository manifest. | Python |
-| **[repo-scaffold-nix](https://github.com/timfewi/repo-scaffold-nix)** | Fail-closed scaffolder and flake templates for the files every repository should carry. | Nix |
+The host stays minimal — no agent, no pentest tools, no free shell. Work runs inside Cloud Hypervisor MicroVMs, target scope is enforced by host-side nftables after local confirmation, and provider keys reach the VM only through a session-scoped broker. Started as a fork of PentestAgent and has grown into an independent project.
 
-### Selected systems
+`NixOS` · `Python` · `MicroVMs` · `nftables` · `MCP`
 
-| Project | Purpose | Core |
-| --- | --- | --- |
-| **[Igris Guardian](https://github.com/timfewi/igris-guardian)** | Capability-bounded prompt-injection firewall for agent systems. | Rust · TypeScript · NixOS |
-| **[Memorycreep](https://github.com/timfewi/memorycreep)** | Hardened NixOS workstation for policy-bound AI pentesting and isolated malware analysis. | NixOS · Python · security |
-| **[Commitell](https://github.com/timfewi/commitell)** | Turns a dirty Git worktree into one AI-written, DCO-signed commit. | Go · Git · local tooling |
-| **[lazy-allrounder](https://github.com/timfewi/lazy-allrounder)** | Cross-platform voice AI for dictation, reading, and speech workflows. | Rust · egui · OpenRouter |
+### Agent harness tools
+
+Small, single-purpose building blocks for agent-assisted engineering. Each is local-first, packaged with Nix and usable from any MCP-capable harness or the shell. Together they form a loop: **specify** the contracts, **understand** the code, **verify** the change, **check** the interface.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**[architecture-kit](https://github.com/timfewi/architecture-kit)**
+
+Specification and verification kit for portable agent systems: transport-neutral tool contracts, runtime profiles, schemas and evidence requirements.
+
+`Python` · `JSON Schema` · `specs`
+
+</td>
+<td width="50%" valign="top">
+
+**[ast-index-nix](https://github.com/timfewi/ast-index-nix)**
+
+Local-first AST code index for agent harnesses. Tree-sitter and SQLite behind a single MCP tool for search, outlines, callers and impact — no network, no telemetry.
+
+`Rust` · `tree-sitter` · `MCP`
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**[project-check-nix](https://github.com/timfewi/project-check-nix)**
+
+Argv-only verification runner driven by a per-repository manifest. `fast`, `full` and `watch` profiles, no shell evaluation, bounded timeouts.
+
+`Python` · `Nix`
+
+</td>
+<td width="50%" valign="top">
+
+**[visual-qa-mcp](https://github.com/timfewi/visual-qa-mcp)**
+
+MCP server for evidence-backed visual QA: inspect a running UI, read findings with screenshots, fix one thing, recheck only what the fix could affect.
+
+`TypeScript` · `Playwright` · `axe-core` · `MCP`
+
+</td>
+</tr>
+</table>
 
 ## About
 
-I'm an independent software engineer based in Vienna. I like the whole picture: understanding how a system fits together, then getting hands-on with the work that moves it forward. I explain trade-offs, make decisions in context, and aim for software that remains understandable after handover.
+I'm an independent software engineer based in Vienna, working on web applications, AI integrations and the Linux &amp; NixOS systems underneath them. I like understanding how a system fits together, explaining the trade-offs, and leaving software that stays understandable after handover.
 
 `declarative over implicit` · `capabilities over ambient authority` · `evidence over claims`
 
+`Rust` · `Python` · `TypeScript` · `Go` · `Nix` · `Linux`
+
 ## Contact
 
-For a project, tell me what you need, your expected timeline, and whether you prefer a scoped project, hourly support, or work with your team. For a technical question, a short description and relevant context are enough.
+Working on something similar, or want help with a project? Write to me — a short description and some context are enough.
 
 <p>
   <a href="mailto:hello@timwitter.com"><strong>hello@timwitter.com</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://timwitter.com/">timwitter.com</a>
   &nbsp;·&nbsp;
   Vienna, Austria
 </p>
