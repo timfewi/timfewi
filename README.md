@@ -1,12 +1,8 @@
-<p align="center">
-  <img src="./assets/github-profile-banner-animated.webp" alt="Tim Witter — independent software and AI systems engineer in Vienna" width="100%" />
-</p>
-
 <h1 align="center">Tim Witter</h1>
 
 <p align="center">
-  <strong>Independent software &amp; AI systems engineer in Vienna.</strong><br />
-  I build the infrastructure that lets AI agents do real work — isolated, declarative and verifiable.
+  <strong>AI systems on solid infrastructure.</strong><br />
+  Independent engineer in Vienna · AI, infrastructure &amp; security
 </p>
 
 <p align="center">
@@ -19,91 +15,110 @@
 
 ---
 
-## Open source
+I design and build AI and agent systems, reproducible Linux and NixOS infrastructure, and the network and security layers around them — for developer teams, startups and anyone working on hard technical problems.
 
-### [Tentaflake](https://github.com/timfewi/tentaflake)
+**Agents on top, infrastructure underneath:** agents that run safely, hosts that can be rebuilt from a file, and networks that only allow what they should.
 
-**Declaratively deploy and manage multiple isolated AI agents on a single NixOS machine — each with its own secrets, skills, and personality.**
+| AI & agent systems | Linux & NixOS | Network & security | Software & tooling |
+| --- | --- | --- | --- |
+| Agent workflows · isolated runtimes · tool & model gateways | NixOS hosts & flakes · MicroVMs & containers · automation | Threat models · egress & segmentation · secrets & access | CLIs, services, terminal UIs and APIs in Rust, Go & Python |
 
-Agents run as OCI containers supervised by systemd. Around them: a Rust operator CLI, an opt-in policy broker for model and fetch egress, a disposable no-egress tool worker, signed-image start gates and encrypted backups — plus an installer ISO to bring up the host.
+## What I'm building
+
+### [Tentaflake](https://github.com/timfewi/tentaflake) — agents that keep running, declared with NixOS
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/agent-office-dark.svg" />
+  <img src="./assets/agent-office-light.svg" alt="Animated isometric office: Hermes, ZeroClaw and OpenClaw agents take tasks from a board, code at their desks, deploy at a server rack and check a dashboard, all connected to the Tentaflake hub." width="100%" />
+</picture>
+
+<sub>Hermes and ZeroClaw are supported, OpenClaw is a scaffold. An illustration of agents at work in a Tentaflake environment, not a live view.</sub>
+
+A NixOS tool that keeps AI agents running around the clock on a headless Linux machine. Each agent lives in its own isolated container, declared in a flake — Tentaflake is the environment around them all.
+
+- **Declarative** — hosts, agents and their runtimes are configuration you can review, rebuild and roll back.
+- **Isolated** — a capsule per agent with its own secrets, skills and persistent workspace. No direct network access by default; models and the web are reached through policy.
+- **Always on** — headless and 24/7 under systemd, with a Rust broker and operator CLI. Unattended start requires the agent's policy boundaries to be in place.
 
 > Autonomy should increase capability, not implicit authority.
 
-`NixOS` · `Rust` · `OCI containers` · `brokered egress` · `pre-1.0`
+`NixOS` · `Rust` · `OCI containers` · `systemd` · `pre-1.0`
 
-[Repository](https://github.com/timfewi/tentaflake) · [Documentation](https://docs.tentaflake.dev/) · [Website](https://tentaflake.dev/)
+[Repository](https://github.com/timfewi/tentaflake) · [Documentation](https://docs.tentaflake.dev/) · [tentaflake.dev](https://tentaflake.dev/)
 
-### [MemoryCreep](https://github.com/timfewi/memorycreep)
+## Tools for agent-assisted engineering
 
-**Hardened NixOS workstation for policy-bound, AI-assisted pentesting and isolated malware analysis.**
+Tentaflake runs the agents; these tools shape how they work. Each one is small, local-first, packaged with Nix and usable from Claude Code, Codex, OpenCode or the shell — built for and used on my own NixOS workstation. Together they form a loop: **guide** the agent, **navigate** the code, **verify** the change, **specify** the contracts.
 
-The host stays minimal — no agent, no pentest tools, no free shell. Work runs inside Cloud Hypervisor MicroVMs, target scope is enforced by host-side nftables after local confirmation, and provider keys reach the VM only through a session-scoped broker. Started as a fork of PentestAgent and has grown into an independent project.
+### [unix-agent-skills](https://github.com/timfewi/unix-agent-skills)
 
-`NixOS` · `Python` · `MicroVMs` · `nftables` · `MCP`
+**Small, isolated Agent Skills for coding agents on Linux and macOS.**
 
-### Agent harness tools
+Each skill does one job, stands alone and is short enough to load whole — across `agent/`, `code/`, `vcs/`, `security/` and `system/`: `tool-use`, `filesystem-wizard`, `fast-checks`, `finalize-loop`, `process-debugging`, `portable-shell` and more.
 
-Small, single-purpose building blocks for agent-assisted engineering. Each is local-first, packaged with Nix and usable from any MCP-capable harness or the shell. Together they form a loop: **specify** the contracts, **understand** the code, **verify** the change, **check** the interface.
+- Written for bash and zsh, GNU and BSD userlands.
+- Every `SKILL.md` stays under 400 words; routing cases cover positive, negative and ambiguous requests.
+- Install with Nix (`lib.skills`) or by linking the skill directories into your harness.
 
-<table>
-<tr>
-<td width="50%" valign="top">
+`Agent Skills` · `Claude Code` · `Codex` · `OpenCode` · `Nix` — related: [Skills belong at the moment of need](https://timwitter.com/blog/skills-at-the-moment-of-need/)
 
-**[architecture-kit](https://github.com/timfewi/architecture-kit)**
+### [ast-index-nix](https://github.com/timfewi/ast-index-nix)
 
-Specification and verification kit for portable agent systems: transport-neutral tool contracts, runtime profiles, schemas and evidence requirements.
+**Local-first AST code index — structural answers with honest unknowns.**
 
-`Python` · `JSON Schema` · `specs`
+Tree-sitter extracts definitions, call sites, imports and SQL dependencies into one SQLite file. Agents search, outline, follow callers and callees and estimate impact through a single MCP tool (`code_explore`), a `--json` CLI or a shared Unix-socket service.
 
-</td>
-<td width="50%" valign="top">
+- Rust, Python, TypeScript/TSX, JavaScript, Nix, Bash, Go, Lua and PostgreSQL.
+- Precision first: an ambiguous name stays unresolved instead of being guessed.
+- No network, no telemetry, no LLM dependency.
 
-**[ast-index-nix](https://github.com/timfewi/ast-index-nix)**
+`Rust` · `tree-sitter` · `SQLite` · `MCP` — related: [Structural navigation with honest unknowns](https://timwitter.com/blog/structural-navigation-with-honest-unknowns/)
 
-Local-first AST code index for agent harnesses. Tree-sitter and SQLite behind a single MCP tool for search, outlines, callers and impact — no network, no telemetry.
+### [project-check-nix](https://github.com/timfewi/project-check-nix)
 
-`Rust` · `tree-sitter` · `MCP`
+**Argv-only verification runner — one manifest per repository, no shell evaluation.**
 
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
+`project-check` reads `.project-checks.json` and runs pinned commands in `baseline`, `fast`, `full` and `watch` profiles, with `--json` reports for agents and CI.
 
-**[project-check-nix](https://github.com/timfewi/project-check-nix)**
+- `--plan` shows the selected checks and missing prerequisites without running anything; `--changed` marks which checks a change affects and never skips one.
+- Zero findings are not proof of coverage: a run without supported sources or with parser errors never reports `passed`.
+- The bundled `project-docs` refreshes declared Markdown from templates, with versions read from lockfiles and manifests.
 
-Argv-only verification runner driven by a per-repository manifest. `fast`, `full` and `watch` profiles, no shell evaluation, bounded timeouts.
+`Python` · `Nix` — related: [Verification is a project contract](https://timwitter.com/blog/verification-as-a-project-contract/)
 
-`Python` · `Nix`
+### [architecture-kit](https://github.com/timfewi/architecture-kit)
 
-</td>
-<td width="50%" valign="top">
+**Specification and verification kit for portable agent systems.**
 
-**[visual-qa-mcp](https://github.com/timfewi/visual-qa-mcp)**
+Transport-neutral tool contracts, launch, task, grant and receipt schemas, and profiles from a single coding harness (`agent-starter`) to a complete reference workstation (`full-workstation`).
 
-MCP server for evidence-backed visual QA: inspect a running UI, read findings with screenshots, fix one thing, recheck only what the fix could affect.
+- It specifies, it does not deploy: no provider SDK, model loop or runtime inside.
+- Synthetic examples and negative contract tests, with integrity, privacy and JSON Schema checks.
+- Honest about evidence: fixtures prove contract consistency — not a runtime, a deployment or a security boundary.
 
-`TypeScript` · `Playwright` · `axe-core` · `MCP`
+`Python` · `JSON Schema` · `specs` — related: [Separate levels of architecture evidence](https://timwitter.com/blog/separate-levels-of-architecture-evidence/)
 
-</td>
-</tr>
-</table>
+## More open source
+
+- **[MemoryCreep](https://github.com/timfewi/memorycreep)** — hardened NixOS workstation for policy-bound, AI-assisted pentesting and isolated malware analysis. Work runs in Cloud Hypervisor MicroVMs; target scope is enforced by host-side nftables. Started as a fork of PentestAgent. `NixOS` · `Python` · `MicroVMs`
+- **[visual-qa-mcp](https://github.com/timfewi/visual-qa-mcp)** — MCP server for evidence-backed visual QA: inspect a running UI, fix one thing, recheck only what the fix could affect. `TypeScript` · `Playwright` · `MCP`
 
 ## About
 
-I'm an independent software engineer based in Vienna, working on web applications, AI integrations and the Linux &amp; NixOS systems underneath them. I like understanding how a system fits together, explaining the trade-offs, and leaving software that stays understandable after handover.
+Hi, I'm Tim — an independent engineer in Vienna. I like systems with clear boundaries: where an agent may act, what a host may trust, what a network should allow. I start with the requirements, the existing code and the people working with it, explain trade-offs, and aim for software that stays understandable after handover.
 
 `declarative over implicit` · `capabilities over ambient authority` · `evidence over claims`
 
-`Rust` · `Python` · `TypeScript` · `Go` · `Nix` · `Linux`
+`Rust` · `Go` · `Python` · `TypeScript` · `Bash` · `Linux` · `NixOS` · `systemd` · `Tailscale`
 
-## Contact
+## Let's talk
 
-Working on something similar, or want help with a project? Write to me — a short description and some context are enough.
+Scoped projects, hourly support, or part of your team — for developer teams, startups and anyone building technically demanding systems. Tell me what you need and your timeline; for a technical question, a short description and some context are enough.
 
 <p>
   <a href="mailto:hello@timwitter.com"><strong>hello@timwitter.com</strong></a>
   &nbsp;·&nbsp;
   <a href="https://timwitter.com/">timwitter.com</a>
   &nbsp;·&nbsp;
-  Vienna, Austria
+  Vienna · remote worldwide
 </p>
