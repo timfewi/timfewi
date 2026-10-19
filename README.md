@@ -98,9 +98,9 @@ Transport-neutral tool contracts, launch, task, grant and receipt schemas, and p
 
 `Python` · `JSON Schema` · `specs` — related: [Separate levels of architecture evidence](https://timwitter.com/blog/separate-levels-of-architecture-evidence/)
 
-## More open source
+## More projects
 
-- **[MemoryCreep](https://github.com/timfewi/memorycreep)** — hardened NixOS workstation for policy-bound, AI-assisted pentesting and isolated malware analysis. Work runs in Cloud Hypervisor MicroVMs; target scope is enforced by host-side nftables. Started as a fork of PentestAgent. `NixOS` · `Python` · `MicroVMs`
+- **[MemoryCreep](https://github.com/timfewi/memorycreep)** — a CLI agent for pentesting, security research, reverse engineering and building security tools. Work directly in the terminal with `creep`: inspect projects, edit code, run approved assessment tools and keep evidence across sessions. A native Rust terminal, Pi agent engine and Python tool policy. In development; source currently private. `CLI` · `Rust` · `TypeScript` · `Python`
 - **[visual-qa-mcp](https://github.com/timfewi/visual-qa-mcp)** — MCP server for evidence-backed visual QA: inspect a running UI, fix one thing, recheck only what the fix could affect. `TypeScript` · `Playwright` · `MCP`
 
 ## About
