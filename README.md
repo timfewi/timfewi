@@ -100,7 +100,6 @@ Transport-neutral tool contracts, launch, task, grant and receipt schemas, and p
 
 ## More projects
 
-- **[MemoryCreep](https://github.com/timfewi/memorycreep)** — a CLI agent for pentesting, security research, reverse engineering and building security tools. Work directly in the terminal with `creep`: inspect projects, edit code, run approved assessment tools and keep evidence across sessions. A native Rust terminal, Pi agent engine and Python tool policy. In development; source currently private. `CLI` · `Rust` · `TypeScript` · `Python`
 - **[visual-qa-mcp](https://github.com/timfewi/visual-qa-mcp)** — MCP server for evidence-backed visual QA: inspect a running UI, fix one thing, recheck only what the fix could affect. `TypeScript` · `Playwright` · `MCP`
 
 ## About
