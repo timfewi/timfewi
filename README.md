@@ -86,9 +86,8 @@ Tree-sitter extracts definitions, call sites, imports and SQL dependencies into 
 
 `Python` · `Nix` — related: [Verification is a project contract](https://timwitter.com/blog/verification-as-a-project-contract/)
 
-## More open source
+## More projects
 
-- **[MemoryCreep](https://github.com/timfewi/memorycreep)** — hardened NixOS workstation for policy-bound, AI-assisted pentesting and isolated malware analysis. Work runs in Cloud Hypervisor MicroVMs; target scope is enforced by host-side nftables. Started as a fork of PentestAgent. `NixOS` · `Python` · `MicroVMs`
 - **[visual-qa-mcp](https://github.com/timfewi/visual-qa-mcp)** — MCP server for evidence-backed visual QA: inspect a running UI, fix one thing, recheck only what the fix could affect. `TypeScript` · `Playwright` · `MCP`
 
 ## About
