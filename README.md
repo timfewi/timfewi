@@ -48,7 +48,7 @@ A NixOS tool that keeps AI agents running around the clock on a headless Linux m
 
 ## Tools for agent-assisted engineering
 
-Tentaflake runs the agents; these tools shape how they work. Each one is small, local-first, packaged with Nix and usable from Claude Code, Codex, OpenCode or the shell — built for and used on my own NixOS workstation. Together they form a loop: **guide** the agent, **navigate** the code, **verify** the change, **specify** the contracts.
+Tentaflake runs the agents; these tools shape how they work. Each one is small, local-first, packaged with Nix and usable from Claude Code, Codex, OpenCode or the shell — built for and used on my own NixOS workstation. Together they form a loop: **guide** the agent, **navigate** the code and **verify** the change.
 
 ### [unix-agent-skills](https://github.com/timfewi/unix-agent-skills)
 
@@ -86,17 +86,6 @@ Tree-sitter extracts definitions, call sites, imports and SQL dependencies into 
 
 `Python` · `Nix` — related: [Verification is a project contract](https://timwitter.com/blog/verification-as-a-project-contract/)
 
-### [architecture-kit](https://github.com/timfewi/architecture-kit)
-
-**Specification and verification kit for portable agent systems.**
-
-Transport-neutral tool contracts, launch, task, grant and receipt schemas, and profiles from a single coding harness (`agent-starter`) to a complete reference workstation (`full-workstation`).
-
-- It specifies, it does not deploy: no provider SDK, model loop or runtime inside.
-- Synthetic examples and negative contract tests, with integrity, privacy and JSON Schema checks.
-- Honest about evidence: fixtures prove contract consistency — not a runtime, a deployment or a security boundary.
-
-`Python` · `JSON Schema` · `specs` — related: [Separate levels of architecture evidence](https://timwitter.com/blog/separate-levels-of-architecture-evidence/)
 
 ## More projects
 
