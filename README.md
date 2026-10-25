@@ -48,7 +48,7 @@ A NixOS tool that keeps AI agents running around the clock on a headless Linux m
 
 ## Tools for agent-assisted engineering
 
-Tentaflake runs the agents; these tools shape how they work. Each one is small, local-first, packaged with Nix and usable from Claude Code, Codex, OpenCode or the shell — built for and used on my own NixOS workstation. Together they form a loop: **guide** the agent, **navigate** the code and **verify** the change.
+Tentaflake runs the agents; these tools shape how they work. Each one is small, local-first, packaged with Nix and usable from Claude Code, Codex, OpenCode or the shell — built for and used on my own NixOS workstation. Together they form a loop: **guide** the agent, **navigate** the code, **verify** the change and **carry context** into the next session.
 
 ### [unix-agent-skills](https://github.com/timfewi/unix-agent-skills)
 
@@ -85,6 +85,18 @@ Tree-sitter extracts definitions, call sites, imports and SQL dependencies into 
 - The bundled `project-docs` refreshes declared Markdown from templates, with versions read from lockfiles and manifests.
 
 `Python` · `Nix` — related: [Verification is a project contract](https://timwitter.com/blog/verification-as-a-project-contract/)
+
+### [Ichnora](https://github.com/timfewi/ichnora)
+
+**Local, project-scoped memory with provenance for coding agents.**
+
+One Go executable keeps claims, decisions and task checkpoints in SQLite/FTS5, so later sessions can pick up unfinished work without treating old context as current evidence.
+
+- Evidence references and dependency checks distinguish current information from stale history.
+- Project enrollment is explicit; session collection and automatic recall are off by default.
+- CLI, stdio MCP bridge and harness hook adapters; deterministic retrieval with no model calls or network fallback.
+
+`Go` · `SQLite/FTS5` · `MCP` · `Nix` · `Apache-2.0`
 
 ## More projects
 
