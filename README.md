@@ -27,10 +27,10 @@ I build AI agents and the systems around them:
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="./assets/agent-harness-narrow-dark.svg" />
   <source media="(max-width: 600px)" srcset="./assets/agent-harness-narrow-light.svg" />
   <source media="(prefers-color-scheme: dark)" srcset="./assets/agent-harness-dark.svg" />
-  <img src="./assets/agent-harness-light.svg" width="100%" alt="Illustration with synthetic data: three agents at a shared table take the task 'repair routing and firewall' from a board and work with shell, ip route and nft. A corrected configuration goes into an isolated Linux network with a client, a router, a firewall and two services. Traffic to web passes the firewall; traffic to admin stops there. An evaluator outside the network checks that web is reachable and admin is blocked, and the result reads pass." />
+  <img src="./assets/agent-harness-light.svg" width="100%" alt="Illustration with synthetic data: an isometric arena with a crowd in the stands. A screen shows the task 'repair routing and firewall', the same for every agent. Several agents compete, each in front of its own sealed glass box, an isolated Linux network with a client, a router, a firewall and two services, web and admin. An independent evaluator on a podium probes each network in turn; lamps on each roof show whether web is reachable and admin is blocked. The outcomes are invented for the picture." />
 </picture>
 
-<sub>Illustration with synthetic data, not a recording or a live run. The shared table is a picture of the idea: in the benchmark, each agent run is isolated. No scores are shown.</sub>
+<sub>Illustration with synthetic runs and outcomes, not a recording or a live run. Each agent run is isolated; the arena only shows that they get the same task and the same checks. No scores or rankings are shown.</sub>
 
 One task from a private benchmark I use to compare agent harnesses: **repair routing and firewall.** The agent investigates an isolated Linux network and submits a corrected configuration. A separate evaluator then checks the result from outside the agent's run: one service must be reachable, another must stay blocked.
 
