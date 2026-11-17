@@ -2,11 +2,12 @@
 """Render the README's benchmark scene as animated SVGs, wide and narrow.
 
 A dark isometric platform for one agent-harness benchmark task, "repair routing and
-firewall". Tentacles in the style of the Tentaflake mark rise from a shaft below the
-platform and hold every agent from above: the harness. Each agent stands in its own
-marked field with a hologram of its isolated Linux network (client, router, firewall,
-web, admin). An independent evaluator hovers on a separate plate, attached to no
-tentacle, and probes every network: web must be reachable, admin must stay blocked.
+firewall". Tentaflake rises from a shaft in its centre as a giant crystal kraken: the
+Tentaflake mark is its crown, and its arms are the harness. They dock on every agent
+from above, hold the evaluator's eye aloft and reach around the platform from below.
+Each agent stands on its own pad with a hologram of its isolated Linux network (client,
+router, firewall, web, admin). The eye probes every network in turn: web must be
+reachable, admin must stay blocked.
 
 Everything is synthetic: no run, score, ranking or live data. Plain SVG with CSS
 animation, so GitHub shows it without scripts. The base styles are the finished frame;
@@ -23,24 +24,53 @@ from pathlib import Path
 
 ASSETS = Path(__file__).resolve().parent
 HW, HH, ZU = 36, 18, 36  # isometric half tile width, half tile height, unit height
-N, SLAB = 12, 1.4  # platform size in tiles, slab thickness in units
-LOOP = 16  # seconds
+N, SLAB = 14, 1.4  # platform size in tiles, slab thickness in units
+C = N / 2  # the shaft sits in the centre tile corner
+CY = N * HH  # screen y of the platform centre; its screen x is 0
+LOOP = 20  # seconds
 FONT = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace"
 
-SHAFT, SHAFT_R = (6.0, 6.0), 1.4
-AGENTS = (
-    (2.6, 6.0),
-    (6.0, 2.6),
-    (9.4, 6.0),
-    (6.0, 9.4),
-)  # upper left, upper right, lower right, lower left
-AGENT_SCALE = 1.18
+SHAFT_R = 1.6
+HEAD = (0.0, -25.0)  # screen centre of the kraken's head
+EYE = (352.0, -176.0)  # screen centre of the evaluator's eye
+AGENT_SCALE = 1.08
 AGENT_H = 94 * AGENT_SCALE  # pixels from feet to crown
-FIELD = 1.9  # half size of an agent's field in tiles
+PAD = 1.4  # radius of an agent's pad in tiles
+
+
+def grid(sx, sy):
+    """Tile coordinates for a screen offset from the platform centre."""
+    d, s = sx / HW, sy / HH
+    return C + (s + d) / 2, C + (s - d) / 2
+
+
+# Staggered so that no agent stands straight behind another or behind the kraken.
+AGENTS = tuple(
+    grid(*spot)
+    for spot in (
+        (-150, -115),
+        (150, -115),
+        (310, -40),
+        (240, 70),
+        (95, 140),
+        (-95, 140),
+        (-240, 70),
+        (-310, -40),
+    )
+)
 # Invented outcome per network for the picture: (web reachable, admin blocked).
-OUTCOMES = ((True, True), (True, True), (True, False), (True, True))
-FIXED = (20, 30, 38, 26)  # loop percentage at which each agent's fix lands
-PROBE_START, PROBE_STEP = 56, 8
+OUTCOMES = (
+    (True, True),
+    (True, True),
+    (True, True),
+    (True, False),
+    (True, True),
+    (True, True),
+    (False, True),
+    (True, True),
+)
+FIXED = (18, 30, 24, 36, 21, 33, 27, 39)  # loop percentage at which each fix lands
+PROBE_START, PROBE_STEP = 46, 6
 
 INK, MUTED, DIM = "#e8edf5", "#9aa6b8", "#5b6677"
 BLUE_DEEP, BLUE_MID, BLUE_LIGHT, BLUE_SPEC = "#0f3a94", "#2364de", "#62a5ff", "#d2e7ff"
@@ -88,6 +118,21 @@ def bezier(p0, p1, p2, p3, steps):
             tuple(a * p0[k] + b * p1[k] + c * p2[k] + d * p3[k] for k in range(len(p0)))
         )
     return out
+
+
+def mix(a, b, t):
+    """Blend two #rrggbb colours."""
+    ca = [int(a[i : i + 2], 16) for i in (1, 3, 5)]
+    cb = [int(b[i : i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(x + (y - x) * t):02x}" for x, y in zip(ca, cb))
+
+
+def noise(seed):
+    """Deterministic stream of numbers in [0, 1)."""
+    state = seed
+    while True:
+        state = (state * 1103515245 + 12345) % 2**31
+        yield state / 2**31
 
 
 # --- tentacles -------------------------------------------------------------------
@@ -152,18 +197,75 @@ def tentacle(points, w0, w1, suckers=True):
     return "".join(out)
 
 
+def moving(svg, a, b, key, sheet, period, swing=0.0, skew=0.0, curl=0.0):
+    """Wrap an arm from a to b in the motion that suits it.
+
+    `skew` and `curl` shear and stretch the arm around the line a-b, so it flexes while
+    both ends stay where they are: for arms docked on something. `swing` rotates the
+    whole arm around its root a: for arms whose tip is free.
+    """
+    phi = math.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))
+    frame = f"translate({num(a[0])}px,{num(a[1])}px) rotate({phi:.2f}deg)"
+    back = f"rotate({-phi:.2f}deg) translate({num(-a[0])}px,{num(-a[1])}px)"
+    pivot = f"translate({num(a[0])}px,{num(a[1])}px)"
+    unpivot = f"translate({num(-a[0])}px,{num(-a[1])}px)"
+    layers = []
+    if curl:
+        layers.append(
+            (
+                f"c{key}",
+                period * 0.71,
+                f"{frame} scale(1,{1 - curl:.3f}) {back}",
+                f"{frame} scale(1,{1 + curl:.3f}) {back}",
+            )
+        )
+    if skew:
+        layers.append(
+            (
+                f"k{key}",
+                period,
+                f"{frame} skewX({-skew:.2f}deg) {back}",
+                f"{frame} skewX({skew:.2f}deg) {back}",
+            )
+        )
+    if swing:
+        layers.append(
+            (
+                f"w{key}",
+                period * 1.37,
+                f"{pivot} rotate({-swing:.2f}deg) {unpivot}",
+                f"{pivot} rotate({swing:.2f}deg) {unpivot}",
+            )
+        )
+    delay = (sum(map(ord, key)) * 1.7) % period
+    for name, duration, start, end in layers:
+        sheet.append(
+            f"@keyframes {name}{{from{{transform:{start}}}to{{transform:{end}}}}}"
+        )
+        svg = (
+            f'<g class="arm" style="animation-name:{name};animation-duration:{duration:.1f}s;'
+            f'animation-delay:-{delay:.1f}s">{svg}</g>'
+        )
+    return svg
+
+
 def control_path(agent):
-    """3D curve from the shaft up and over, descending onto the agent's crown."""
+    """3D curve from the shaft, under the kraken's body, over and down onto the agent's crown."""
     ax, ay = agent
-    sx = SHAFT[0] + 0.45 * math.copysign(1, ax - SHAFT[0]) * (ax != SHAFT[0])
-    sy = SHAFT[1] + 0.45 * math.copysign(1, ay - SHAFT[1]) * (ay != SHAFT[1])
+    dx, dy = ax - C, ay - C
+    reach = math.hypot(dx, dy)
+    sx, sy = C + dx / reach * 1.15, C + dy / reach * 1.15
     crown = AGENT_H / ZU + 0.02
-    curve = bezier((sx, sy, -0.3), (sx, sy, 4.6), (ax, ay, 5.4), (ax, ay, crown), 36)
+    if dx + dy > 0:  # towards the viewer: stay low, clear of the kraken's face
+        c1 = (sx + dx * 0.42, sy + dy * 0.42, 1.2)
+    else:  # away from the viewer: rise behind the body first
+        c1 = (sx + dx * 0.12, sy + dy * 0.12, 5.4)
+    curve = bezier((sx, sy, -0.3), c1, (ax, ay, crown + 2.7), (ax, ay, crown), 30)
     return [P(*p) for p in curve]
 
 
 def pulse_track(name, points):
-    """Keyframes for a light running along a tentacle from the shaft to its agent."""
+    """Keyframes for a light running along an arm from the shaft to its agent."""
     x0, y0 = points[0]
     picks = points[2::3]
     frames = ["0%{opacity:0;transform:translate(0,0)}"]
@@ -182,19 +284,81 @@ def pulse_track(name, points):
 # --- platform --------------------------------------------------------------------
 
 
-def underside():
+def backdrop(sheet):
+    """Behind the platform: two arms rising out of the dark, and the kraken's halo."""
+    a = []
+    for sign in (-1, 1):
+        curve = bezier(
+            (sign * 452, CY + 40),
+            (sign * 500, 150),
+            (sign * 396, 96),
+            (sign * 430, 22),
+            26,
+        )
+        a.append(
+            f'<g opacity=".5">{moving(tentacle(curve, 46, 9), curve[0], curve[-1], "bl"[sign > 0] + "a", sheet, 9, swing=2.4, curl=0.14)}</g>'
+        )
+    hx, hy = HEAD[0], HEAD[1] - 122
+    ticks = "".join(
+        seg(
+            (
+                math.cos(t) * (150 if k % 3 else 143),
+                math.sin(t) * (150 if k % 3 else 143),
+            ),
+            (math.cos(t) * 160, math.sin(t) * 160),
+        )
+        for k in range(48)
+        for t in (math.tau * k / 48,)
+    )
+    signs = "".join(
+        f'<path d="{GLYPHS[(k * 3 + k // 2) % len(GLYPHS)]}" transform="rotate({360 * k / 18:.1f}) translate(0 -127) scale(.8)"/>'
+        for k in range(18)
+    )
+    a.append(
+        f'<ellipse cx="{num(hx)}" cy="{num(hy + 30)}" rx="210" ry="190" fill="{BLUE_MID}" opacity=".3" filter="url(#haze)"/>'
+        f'<g transform="translate({num(hx)} {num(hy)})" class="halo" opacity=".42" stroke="{BLUE_LIGHT}" fill="none">'
+        f'<circle r="166" stroke-width="1.2"/><circle r="139" stroke-width=".8"/><circle r="115" stroke-width=".8"/>'
+        f'<path d="{ticks}" stroke-width="1"/><g stroke-width="1.1" opacity=".8">{signs}</g>'
+        f'<path d="M0 -139L120.4 69.5L-120.4 69.5Z" stroke-width=".8" opacity=".7"/>'
+        f'<path d="M0 139L120.4 -69.5L-120.4 -69.5Z" stroke-width=".8" opacity=".7"/></g>'
+    )
+    return "".join(a)
+
+
+def underside(sheet):
     """What comes from below: the trunk and two arms reaching up around the platform."""
     bottom = P(N, N)[1]
-    a = [f'<ellipse cx="0" cy="{num(bottom + 60)}" rx="360" ry="110" fill="{BLUE_MID}" opacity=".2" filter="url(#haze)"/>']
-    trunk = bezier((0, bottom - 70), (-26, bottom + 60), (30, bottom + 180), (-6, bottom + 330), 30)
-    a.append(tentacle(trunk, 176, 150, suckers=False))
-    for sign, origin in ((-1, "100% 100%"), (1, "0% 100%")):
-        curve = bezier((sign * 70, bottom - 30), (sign * 250, bottom + 185), (sign * 600, bottom + 120),
-                       (sign * 474, 196), 44)
-        a.append(f'<g class="sway" style="transform-origin:{origin};animation-delay:{-3 if sign > 0 else 0}s">'
-                 f"{tentacle(curve, 64, 12)}</g>")
+    a = [
+        f'<ellipse cx="0" cy="{num(bottom + 60)}" rx="400" ry="110" fill="{BLUE_MID}" opacity=".2" filter="url(#haze)"/>'
+    ]
+    trunk = bezier(
+        (0, bottom - 70), (-26, bottom + 60), (30, bottom + 180), (-6, bottom + 330), 24
+    )
+    a.append(tentacle(trunk, 168, 144, suckers=False))
+    for sign in (-1, 1):
+        curve = bezier(
+            (sign * 76, bottom - 30),
+            (sign * 290, bottom + 190),
+            (sign * 690, bottom + 130),
+            (sign * 548, CY - 26),
+            40,
+        )
+        a.append(
+            moving(
+                tentacle(curve, 66, 12),
+                curve[0],
+                curve[-1],
+                "lr"[sign > 0] + "b",
+                sheet,
+                11,
+                swing=1.5,
+                curl=0.07,
+            )
+        )
     # Everything below sinks into the dark it rises from.
-    a.append(f'<rect x="-700" y="{num(bottom + 30)}" width="1400" height="1600" fill="url(#deep)"/>')
+    a.append(
+        f'<rect x="-800" y="{num(bottom + 30)}" width="1600" height="1600" fill="url(#deep)"/>'
+    )
     return "".join(a)
 
 
@@ -203,16 +367,25 @@ def platform():
     a = [
         poly([P(0, N), P(N, N), P(N, N, -SLAB), P(0, N, -SLAB)], "url(#slabL)"),
         poly([P(N, 0), P(N, N), P(N, N, -SLAB), P(N, 0, -SLAB)], "url(#slabR)"),
-        poly(top, "#161b25"),
+        poly(top, "#141922"),
         poly(top, "url(#floorGlow)"),
     ]
-    grid = "".join(seg(P(i, 0), P(i, N)) + seg(P(0, i), P(N, i)) for i in range(1, N))
-    a.append(f'<path d="{grid}" stroke="#8fb0ff" stroke-width="1" opacity=".07"/>')
-    seams = "".join(seg(P(i, N, -0.3), P(i, N, -SLAB)) + seg(P(N, i, -0.3), P(N, i, -SLAB)) for i in range(2, N, 2))
+    grid_lines = "".join(
+        seg(P(i, 0), P(i, N)) + seg(P(0, i), P(N, i)) for i in range(1, N)
+    )
+    a.append(
+        f'<path d="{grid_lines}" stroke="#8fb0ff" stroke-width="1" opacity=".06"/>'
+    )
+    seams = "".join(
+        seg(P(i, N, -0.3), P(i, N, -SLAB)) + seg(P(N, i, -0.3), P(N, i, -SLAB))
+        for i in range(2, N, 2)
+    )
     a.append(f'<path d="{seams}" stroke="#05070b" stroke-width="1.5" opacity=".7"/>')
     for i in range(1, N, 2):
         for point in (P(i, N, -0.55), P(N, i, -0.55)):
-            a.append(f'<circle cx="{num(point[0])}" cy="{num(point[1])}" r="1.8" fill="{BLUE_LIGHT}" opacity=".8"/>')
+            a.append(
+                f'<circle cx="{num(point[0])}" cy="{num(point[1])}" r="1.8" fill="{BLUE_LIGHT}" opacity=".8"/>'
+            )
     # Lit bevel on the two front edges and a hairline around the top.
     a.append(
         f'<path d="{seg(P(0, N), P(N, N))}{seg(P(N, N), P(N, 0))}" stroke="#4a5873" stroke-width="2"/>'
@@ -225,40 +398,203 @@ def platform():
     return "".join(a)
 
 
-def field(i, agent):
-    """An agent's own marked field: floor tint, dashed outline and two faint back walls."""
+GLYPHS = (
+    "M-5 -8L5 -8M0 -8L0 8",
+    "M-5 8L0 -8L5 8",
+    "M-5 -8L5 0L-5 8",
+    "M-5 -8L-5 8L5 8M5 -8L5 0",
+    "M0 -8L6 0L0 8L-6 0Z",
+    "M-5 -8L5 8M5 -8L-5 8",
+    "M-5 -8L5 -8L-5 8L5 8",
+    "M0 -8L0 8M-5 -2L5 -2M-5 3L5 3",
+)
+
+
+def rune_ring():
+    """A ring of signs in the floor around the shaft, drawn flat and laid into the floor plane."""
+    scale = math.sqrt(2) * HW
+    inner, outer = 2.2 * scale, 3.05 * scale
+    middle = (inner + outer) / 2
+    count = 28
+    signs = "".join(
+        f'<path d="{GLYPHS[(k * 5 + k // 3) % len(GLYPHS)]}" transform="rotate({360 * k / count:.1f}) translate(0 {num(-middle)})"/>'
+        for k in range(count)
+    )
+    return (
+        f'<g transform="translate(0 {num(CY)}) scale(1 .5)" class="rune" fill="none" stroke="{BLUE_LIGHT}">'
+        f'<circle r="{num(inner)}" stroke-width="2" opacity=".7"/><circle r="{num(outer)}" stroke-width="2" opacity=".7"/>'
+        f'<circle r="{num(outer + 9)}" stroke-width="1" opacity=".35" stroke-dasharray="3 9"/>'
+        f'<g stroke-width="1.8" opacity=".75">{signs}</g></g>'
+    )
+
+
+def pad(agent):
+    """An agent's own pad: a marked disc in the floor, wired to the ring around the shaft."""
     ax, ay = agent
-    x0, y0, x1, y1 = ax - FIELD, ay - FIELD, ax + FIELD, ay + FIELD
-    h = 1.5
-    a = [
-        poly([P(x0, y0), P(x1, y0), P(x1, y1), P(x0, y1)], "#8fb0ff", ' opacity=".05"'),
-        poly([P(x0, y0), P(x1, y0), P(x1, y0, h), P(x0, y0, h)], "url(#wall)"),
-        poly([P(x0, y0), P(x0, y1), P(x0, y1, h), P(x0, y0, h)], "url(#wall)"),
-        f'<path d="M{pts([P(x0, y0), P(x1, y0), P(x1, y1), P(x0, y1)])}Z" stroke="#8fb0ff" stroke-width="1.3" '
-        f'stroke-dasharray="7 5" fill="none" opacity=".55"/>',
-    ]
-    posts = "".join(
-        seg(P(x, y), P(x, y, 0.45)) for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1))
+    cx, cy = P(ax, ay)
+    rx, ry = PAD * math.sqrt(2) * HW, PAD * math.sqrt(2) * HH
+    dx, dy = ax - C, ay - C
+    reach = math.hypot(dx, dy)
+    near = (C + dx / reach * 3.3, C + dy / reach * 3.3)
+    edge = (ax - dx / reach * PAD, ay - dy / reach * PAD)
+    ticks = "".join(
+        seg(
+            (cx + math.cos(t) * rx * 0.86, cy + math.sin(t) * ry * 0.86),
+            (cx + math.cos(t) * rx, cy + math.sin(t) * ry),
+        )
+        for k in range(12)
+        for t in (math.tau * k / 12,)
     )
-    a.append(f'<path d="{posts}" stroke="#b9ccff" stroke-width="2" opacity=".8"/>')
-    # Trace in the floor from the shaft to the field.
-    edge = (ax + (SHAFT[0] - ax) * 0.52, ay + (SHAFT[1] - ay) * 0.52)
-    near = (ax + (SHAFT[0] - ax) * 0.62, ay + (SHAFT[1] - ay) * 0.62)
-    a.append(
-        f'<path d="{seg(P(*edge), P(*near))}" stroke="{BLUE_LIGHT}" stroke-width="2" opacity=".6"/>'
+    return (
+        f'<path d="{seg(P(*near), P(*edge))}" stroke="{BLUE_LIGHT}" stroke-width="1.6" opacity=".5"/>'
+        f'<ellipse cx="{num(cx)}" cy="{num(cy)}" rx="{num(rx)}" ry="{num(ry)}" fill="#0d1119" stroke="#8fb0ff" '
+        f'stroke-width="1.3" stroke-dasharray="7 5" opacity=".75"/>'
+        f'<ellipse cx="{num(cx)}" cy="{num(cy)}" rx="{num(rx)}" ry="{num(ry)}" fill="url(#padGlow)"/>'
+        f'<ellipse cx="{num(cx)}" cy="{num(cy)}" rx="{num(rx * 0.62)}" ry="{num(ry * 0.62)}" fill="none" '
+        f'stroke="{BLUE_LIGHT}" stroke-width="1" opacity=".5"/>'
+        f'<path d="{ticks}" stroke="#b9ccff" stroke-width="1.4" opacity=".7"/>'
     )
-    return "".join(a)
 
 
 def shaft():
-    cx, cy = P(*SHAFT)
     rx, ry = SHAFT_R * math.sqrt(2) * HW, SHAFT_R * math.sqrt(2) * HH
     return "".join(
         (
-            f'<ellipse cx="{num(cx)}" cy="{num(cy)}" rx="{num(rx + 9)}" ry="{num(ry + 4.5)}" fill="#0b0e15" stroke="#4a5873" stroke-width="2"/>',
-            f'<ellipse cx="{num(cx)}" cy="{num(cy)}" rx="{num(rx)}" ry="{num(ry)}" fill="#04060b"/>',
-            f'<ellipse cx="{num(cx)}" cy="{num(cy + 7)}" rx="{num(rx * 0.78)}" ry="{num(ry * 0.7)}" fill="url(#core)" class="breathe"/>',
-            f'<ellipse cx="{num(cx)}" cy="{num(cy)}" rx="{num(rx)}" ry="{num(ry)}" fill="none" stroke="{BLUE_MID}" stroke-width="1.5" opacity=".8"/>',
+            f'<ellipse cx="0" cy="{num(CY)}" rx="{num(rx + 9)}" ry="{num(ry + 4.5)}" fill="#0b0e15" stroke="#4a5873" stroke-width="2"/>',
+            f'<ellipse cx="0" cy="{num(CY)}" rx="{num(rx)}" ry="{num(ry)}" fill="#04060b"/>',
+            f'<ellipse cx="0" cy="{num(CY + 7)}" rx="{num(rx * 0.78)}" ry="{num(ry * 0.7)}" fill="url(#core)" class="breathe"/>',
+            f'<ellipse cx="0" cy="{num(CY)}" rx="{num(rx)}" ry="{num(ry)}" fill="none" stroke="{BLUE_MID}" stroke-width="1.5" opacity=".8"/>',
+        )
+    )
+
+
+# --- the kraken ------------------------------------------------------------------
+
+HEAD_A, HEAD_B, HEAD_D, HEAD_TILT = 112, 138, 104, math.radians(16)
+HEAD_LATS = (-62, -46, -30, -12, 8, 30, 52, 72, 90)
+BROW = 2  # index of the first band drawn over the roots of the face tentacles
+
+
+def head_point(lat, lon):
+    """A point on the kraken's head: a pear-shaped dome, seen slightly from above."""
+    phi, lam = math.radians(lat), math.radians(lon)
+    taper = 1.0 if lat >= 30 else 1 - 0.42 * ((30 - lat) / 92) ** 1.25  # wide skull, narrow face
+    x = HEAD_A * taper * math.cos(phi) * math.sin(lam)
+    y = HEAD_B * math.sin(phi)
+    z = HEAD_D * taper * math.cos(phi) * math.cos(lam)
+    up = y * math.cos(HEAD_TILT) - z * math.sin(HEAD_TILT)
+    depth = y * math.sin(HEAD_TILT) + z * math.cos(HEAD_TILT)
+    return x, up, depth
+
+
+def head(bands):
+    """The given latitude bands of the head as flat-shaded crystal facets, lit from the upper left."""
+    light = (-0.5, 0.62, 0.6)
+    scale = math.sqrt(sum(v * v for v in light))
+    faces = []
+    for i in bands:
+        for j in range(16):
+            lon = j * 22.5
+            quad = [
+                head_point(HEAD_LATS[i], lon),
+                head_point(HEAD_LATS[i], lon + 22.5),
+                head_point(HEAD_LATS[i + 1], lon + 22.5),
+                head_point(HEAD_LATS[i + 1], lon),
+            ]
+            u = [quad[2][k] - quad[0][k] for k in range(3)]
+            v = [quad[3][k] - quad[1][k] for k in range(3)]
+            normal = [
+                u[1] * v[2] - u[2] * v[1],
+                u[2] * v[0] - u[0] * v[2],
+                u[0] * v[1] - u[1] * v[0],
+            ]
+            centre = [sum(p[k] for p in quad) / 4 for k in range(3)]
+            if sum(normal[k] * centre[k] for k in range(3)) < 0:
+                normal = [-c for c in normal]
+            if normal[2] <= 0:
+                continue
+            length = math.sqrt(sum(c * c for c in normal))
+            lit = sum(normal[k] * light[k] for k in range(3)) / length / scale
+            lit = min(1, max(0, lit + ((i * 7 + j * 13) % 5 - 2) * 0.03))
+            if lit < 0.5:
+                colour = mix("#060f26", "#143c8f", lit / 0.5)
+            elif lit < 0.85:
+                colour = mix("#143c8f", "#2f74ea", (lit - 0.5) / 0.35)
+            else:
+                colour = mix("#2f74ea", "#8cc0ff", (lit - 0.85) / 0.15)
+            outline = [(HEAD[0] + p[0], HEAD[1] - p[1]) for p in quad]
+            if HEAD_LATS[i + 1] == 90:
+                outline = outline[:3]
+            faces.append(
+                f'<path d="M{pts(outline)}Z" fill="{colour}" stroke="#050c1f" stroke-width=".9" stroke-linejoin="round"/>'
+            )
+    return "".join(faces)
+
+
+def face():
+    """Two narrow glowing eyes under dark brows."""
+    a = []
+    for sign in (-1, 1):
+        x, up, _ = head_point(-3, sign * 31)
+        ex, ey = HEAD[0] + x, HEAD[1] - up
+
+        def at(points):
+            return [(ex + sign * px, ey + py) for px, py in points]
+
+        slit = at([(-25, 8), (-7, 0), (25, -9), (9, 4), (-9, 8)])
+        a.append(poly(at([(-31, 7), (-9, -11), (32, -20), (25, -9), (-7, 0), (-25, 8)]), "#040a1c"))
+        a.append(poly(slit, "#7fd4ff", ' filter="url(#glow)" class="gaze"'))
+        a.append(poly(slit, "#e9f8ff", ' class="gaze"'))
+    return "".join(a)
+
+
+def beard(sheet):
+    """The face tentacles: they hang from under the eyes, over the body, down to the shaft."""
+    a = []
+    for k, lon in enumerate((-72, 72, -54, 54, -36, 36, -18, 18, 0)):
+        x, up, _ = head_point(-22, lon)
+        rx, ry = HEAD[0] + x, HEAD[1] - up
+        sign = (lon > 0) - (lon < 0)
+        spread = abs(lon) / 72
+        length = 218 - 96 * spread
+        end = (rx * 1.28 + sign * (20 + 26 * spread), ry + length - 22 * spread)
+        curve = bezier(
+            (rx, ry),
+            (rx - sign * 8, ry + length * 0.45),
+            (rx * 1.2 - sign * 10, ry + length + 14),
+            end,
+            18,
+        )
+        a.append(
+            moving(
+                tentacle(curve, 37 - 7 * spread, 8),
+                curve[0],
+                curve[-1],
+                f"f{k}",
+                sheet,
+                6 + k * 0.55,
+                swing=2.2,
+                curl=0.34 if sign else 0,
+            )
+        )
+    return "".join(a)
+
+
+def kraken(mark, sheet):
+    """Body, head, face tentacles and the Tentaflake mark as its crystal crown."""
+    hx, hy = HEAD
+    column = bezier((0, CY + 14), (-10, CY - 60), (8, hy + 150), (0, hy + 84), 14)
+    size = 284
+    bands = range(len(HEAD_LATS) - 1)
+    return "".join(
+        (
+            f'<g opacity=".8">{tentacle(column, 92, 120, suckers=False)}</g>',
+            head(bands[:BROW]),
+            beard(sheet),
+            head(bands[BROW:]),
+            face(),
+            f'<ellipse cx="{num(hx)}" cy="{num(hy - 136)}" rx="130" ry="98" fill="{BLUE_MID}" opacity=".3" filter="url(#haze)" class="breathe"/>',
+            f'<image href="data:image/webp;base64,{mark}" x="{num(hx - size / 2)}" y="{num(hy - 284)}" width="{size}" height="{size}"/>',
         )
     )
 
@@ -267,7 +603,7 @@ def shaft():
 
 
 def agent(i, pos):
-    """A dark, angular operator with a lit visor; the tentacle docks on its crown."""
+    """A dark, angular operator with a lit visor; an arm docks on its crown."""
     fx, fy = P(*pos)
 
     def at(points):
@@ -275,7 +611,7 @@ def agent(i, pos):
 
     lit, mid, dark, rim = "#465064", "#303846", "#1e232d", "#8493ad"
     a = [
-        f'<ellipse cx="{num(fx)}" cy="{num(fy)}" rx="30" ry="11" fill="#000" opacity=".5"/>',
+        f'<ellipse cx="{num(fx)}" cy="{num(fy)}" rx="28" ry="10" fill="#000" opacity=".55"/>',
         f'<g class="stand" style="animation-delay:{-0.9 * i:.1f}s">',
         poly(at([(-12, 0), (-3, 0), (-2, -36), (-14, -36)]), mid),
         poly(at([(3, 0), (12, 0), (14, -36), (2, -36)]), dark),
@@ -316,6 +652,7 @@ def agent(i, pos):
 def hologram(i, pos):
     """The agent's isolated network as a standing hologram: client, router, firewall, web, admin."""
     ax, ay = pos
+    web_ok, admin_blocked = OUTCOMES[i]
     if P(ax, ay)[0] < 0:  # left of the shaft: panel on the agent's left
         origin, axis = (ax - 1.95, ay + 0.9), (1, 0)
     else:
@@ -340,34 +677,55 @@ def hologram(i, pos):
         h(1.38, 0.36),
     )
     gate_web, gate_admin = h(0.98, 0.88), h(0.98, 0.5)
-    # Firewall: a bar with an opening for web once the fix has landed.
-    a.append(
-        f'<path d="{seg(h(0.98, 0.14), h(0.98, 0.76))}{seg(h(0.98, 1.0), h(0.98, 1.22))}" stroke="#e0a26a" stroke-width="4"/>'
-    )
-    a.append(
-        f'<path d="{seg(h(0.98, 0.76), h(0.98, 1.0))}" stroke="#e0a26a" stroke-width="4" class="loop shut s{i}"/>'
-    )
+    # Firewall: a bar that should open for web and stay shut for admin.
+    bar = seg(h(0.98, 0.14), h(0.98, 0.38)) + seg(h(0.98, 0.62), h(0.98, 0.76))
+    bar += seg(h(0.98, 1.0), h(0.98, 1.22))
+    if admin_blocked:
+        bar += seg(h(0.98, 0.38), h(0.98, 0.62))
+    if not web_ok:
+        bar += seg(h(0.98, 0.76), h(0.98, 1.0))
+    a.append(f'<path d="{bar}" stroke="#e0a26a" stroke-width="4"/>')
     a.append(
         f'<path d="{seg(client, router)}" stroke="{INK}" stroke-width="1.4" opacity=".7"/>'
     )
-    a.append(
-        f'<path d="M{pts([router, gate_web, web])}" stroke="{OK}" stroke-width="2" fill="none" class="loop open o{i}"/>'
+    packet = None
+    if web_ok:
+        a.append(
+            f'<path d="{seg(h(0.98, 0.76), h(0.98, 1.0))}" stroke="#e0a26a" stroke-width="4" class="loop shut s{i}"/>'
+        )
+        a.append(
+            f'<path d="M{pts([router, gate_web, web])}" stroke="{OK}" stroke-width="2" fill="none" class="loop open o{i}"/>'
+        )
+        packet = (router, gate_web, web)
+    else:
+        a.append(
+            f'<path d="M{pts([router, gate_web])}" stroke="{DIM}" stroke-width="2" fill="none"/>'
+        )
+    if admin_blocked:
+        a.append(
+            f'<path d="M{pts([router, gate_admin])}" stroke="{BAD}" stroke-width="2" fill="none"/>'
+            f'<path d="M{num(gate_admin[0] - 3)} {num(gate_admin[1] - 3)}l6 6m0 -6l-6 6" stroke="{BAD}" stroke-width="1.8"/>'
+        )
+    else:
+        a.append(
+            f'<path d="M{pts([router, gate_admin, admin])}" stroke="{BAD}" stroke-width="2" fill="none"/>'
+        )
+    nodes = (
+        (client, INK),
+        (router, BLUE_LIGHT),
+        (web, OK if web_ok else DIM),
+        (admin, DIM if admin_blocked else BAD),
     )
-    a.append(
-        f'<path d="M{pts([router, gate_admin])}" stroke="{BAD}" stroke-width="2" fill="none"/>'
-    )
-    for point, colour in ((client, INK), (router, BLUE_LIGHT), (web, OK), (admin, DIM)):
+    for point, colour in nodes:
         a.append(
             f'<circle cx="{num(point[0])}" cy="{num(point[1])}" r="3.6" fill="{colour}"/>'
         )
-    a.append(
-        f'<path d="M{num(gate_admin[0] - 3)} {num(gate_admin[1] - 3)}l6 6m0 -6l-6 6" stroke="{BAD}" stroke-width="1.8"/>'
-    )
-    a.append(
-        f'<g class="loop open o{i}"><circle cx="{num(router[0])}" cy="{num(router[1])}" r="3" fill="{INK}" '
-        f'class="packet k{i}"/></g>'
-    )
-    # Check lamps above the hologram, lit once the evaluator has probed this network.
+    if packet:
+        a.append(
+            f'<g class="loop open o{i}"><circle cx="{num(router[0])}" cy="{num(router[1])}" r="3" fill="{INK}" '
+            f'class="packet q{i}"/></g>'
+        )
+    # Check lamps above the hologram, lit once the eye has probed this network.
     lamps = []
     for k, held in enumerate(OUTCOMES[i]):
         lx, ly = h(0.45 + k * 0.7, top + 0.3)
@@ -377,150 +735,166 @@ def hologram(i, pos):
             f'<circle cx="{num(lx)}" cy="{num(ly)}" r="5.5" fill="{colour}"/>'
         )
     a.append(f'<g class="loop lamp l{i}">{"".join(lamps)}</g>')
-    packet = (router, gate_web, web)
     return "".join(a), packet, h(0.8, top + 0.3)
 
 
+def eye_arm(sheet):
+    """The arm that holds the evaluator's eye aloft, rising from behind the kraken's head."""
+    ex, ey = EYE
+    curve = bezier((34, 60), (128, -214), (286, -28), (ex - 5, ey + 37), 30)
+    return moving(
+        tentacle(curve, 38, 13), curve[0], curve[-1], "ey", sheet, 8, skew=3.2, curl=0.1
+    )
+
+
 def evaluator():
-    """A drone on its own plate above the back corner, attached to no tentacle."""
-    x, y, z, s, t = -2.5, -2.5, 1.0, 1.7, 0.22
-    a = [
-        f'<ellipse cx="{num(P(x + s / 2, y + s / 2, z - 0.6)[0])}" cy="{num(P(x + s / 2, y + s / 2, z - 0.6)[1])}" rx="46" ry="14" fill="{AMBER}" opacity=".16" filter="url(#haze)"/>',
-        poly(
-            [
-                P(x, y + s, z),
-                P(x + s, y + s, z),
-                P(x + s, y + s, z - t),
-                P(x, y + s, z - t),
-            ],
-            "#232a36",
-        ),
-        poly(
-            [
-                P(x + s, y, z),
-                P(x + s, y + s, z),
-                P(x + s, y + s, z - t),
-                P(x + s, y, z - t),
-            ],
-            "#171b24",
-        ),
-        poly(
-            [P(x, y, z), P(x + s, y, z), P(x + s, y + s, z), P(x, y + s, z)], "#2b3342"
-        ),
-        f'<path d="{seg(P(x, y + s, z), P(x + s, y + s, z))}{seg(P(x + s, y + s, z), P(x + s, y, z))}" stroke="{AMBER}" stroke-width="1.5" opacity=".8"/>',
-    ]
-    cx, cy = P(x + s / 2, y + s / 2, z + 1.5)
+    """The evaluator as a single armoured eye, cradled by one of the kraken's arms."""
+    ex, ey = EYE
 
     def at(points):
-        return [(cx + px * 1.35, cy + py * 1.35) for px, py in points]
+        return [(ex + px, ey + py) for px, py in points]
 
-    a.append('<g class="hover">')
-    a.append(
-        f'<ellipse cx="{num(cx)}" cy="{num(cy + 2)}" rx="54" ry="15" fill="none" stroke="{AMBER}" stroke-width="1.5" opacity=".75" transform="rotate(-10 {num(cx)} {num(cy)})"/>'
+    shards = "".join(
+        poly(
+            at([(px, py - 9), (px + 5, py), (px, py + 9), (px - 5, py)]),
+            AMBER,
+            ' opacity=".7"',
+        )
+        for px, py in ((-62, -22), (64, 6), (-40, 44))
     )
-    a.append(poly(at([(0, -34), (-26, -4), (0, 6)]), "#4d5769"))
-    a.append(poly(at([(0, -34), (0, 6), (26, -4)]), "#363e4c"))
-    a.append(poly(at([(-26, -4), (0, 28), (0, 6)]), "#2a303b"))
-    a.append(poly(at([(0, 6), (0, 28), (26, -4)]), "#1c2029"))
-    a.append(
-        f'<path d="M{pts(at([(-26, -4), (0, -34), (26, -4)]))}" stroke="#7a879c" stroke-width="1" fill="none"/>'
+    return (
+        f'<ellipse cx="{num(ex)}" cy="{num(ey)}" rx="70" ry="62" fill="{AMBER}" opacity=".2" filter="url(#haze)"/>'
+        f'<ellipse cx="{num(ex)}" cy="{num(ey + 2)}" rx="56" ry="16" fill="none" stroke="{AMBER}" stroke-width="1.4" '
+        f'opacity=".7" transform="rotate(-12 {num(ex)} {num(ey)})"/>'
+        f'<circle cx="{num(ex)}" cy="{num(ey)}" r="36" fill="url(#orb)" stroke="#7a879c" stroke-width="1.2"/>'
+        f"{poly(at([(-36, -4), (-27, -25), (-6, -36), (17, -33), (33, -16), (36, -3), (20, -17), (0, -22), (-20, -16)]), '#39424f')}"
+        f"{poly(at([(-36, 4), (-22, 17), (0, 23), (22, 16), (36, 3), (30, 21), (12, 34), (-10, 35), (-29, 23)]), '#171b23')}"
+        f'<circle cx="{num(ex)}" cy="{num(ey)}" r="21" fill="{AMBER}" opacity=".6" filter="url(#glow)" class="gaze"/>'
+        f'<circle cx="{num(ex)}" cy="{num(ey)}" r="15.5" fill="url(#iris)"/>'
+        f'<path d="M{num(ex)} {num(ey - 13)}Q{num(ex + 6)} {num(ey)} {num(ex)} {num(ey + 13)}Q{num(ex - 6)} {num(ey)} {num(ex)} {num(ey - 13)}Z" fill="#160d02"/>'
+        f'<circle cx="{num(ex - 5)}" cy="{num(ey - 6)}" r="2.4" fill="#fff6dd"/>'
+        f'<ellipse cx="{num(ex - 4)}" cy="{num(ey + 36)}" rx="14" ry="5" fill="#0b0e15" stroke="{BLUE_LIGHT}" stroke-width="1.5"/>'
+        f"{shards}"
     )
-    a.append(
-        f'<circle cx="{num(cx)}" cy="{num(cy + 5)}" r="15" fill="{AMBER}" opacity=".55" filter="url(#glow)"/>'
-    )
-    a.append(f'<circle cx="{num(cx)}" cy="{num(cy + 5)}" r="9.5" fill="{AMBER}"/>')
-    a.append(f'<circle cx="{num(cx)}" cy="{num(cy + 5)}" r="4" fill="#fff6dd"/>')
-    a.append("</g>")
-    return "".join(a), (cx, cy + 5)
 
 
 # --- composition -----------------------------------------------------------------
 
 
-def defs(mark):
+def defs():
     return (
         "<defs>"
-        '<radialGradient id="bg" cx="50%" cy="46%" r="75%"><stop offset="0" stop-color="#1a2438"/>'
-        '<stop offset=".55" stop-color="#0e131d"/><stop offset="1" stop-color="#07090e"/></radialGradient>'
-        f'<radialGradient id="floorGlow" gradientUnits="userSpaceOnUse" cx="{num(P(*SHAFT)[0])}" cy="{num(P(*SHAFT)[1])}" r="330">'
-        f'<stop offset="0" stop-color="{BLUE_MID}" stop-opacity=".42"/><stop offset=".5" stop-color="{BLUE_MID}" stop-opacity=".1"/>'
+        '<radialGradient id="bg" cx="50%" cy="40%" r="78%"><stop offset="0" stop-color="#172238"/>'
+        '<stop offset=".5" stop-color="#0b1019"/><stop offset="1" stop-color="#05070b"/></radialGradient>'
+        f'<radialGradient id="floorGlow" gradientUnits="userSpaceOnUse" cx="0" cy="{num(CY)}" r="400">'
+        f'<stop offset="0" stop-color="{BLUE_MID}" stop-opacity=".45"/><stop offset=".5" stop-color="{BLUE_MID}" stop-opacity=".1"/>'
+        f'<stop offset="1" stop-color="{BLUE_MID}" stop-opacity="0"/></radialGradient>'
+        f'<radialGradient id="padGlow"><stop offset="0" stop-color="{BLUE_MID}" stop-opacity=".4"/>'
         f'<stop offset="1" stop-color="{BLUE_MID}" stop-opacity="0"/></radialGradient>'
         f'<radialGradient id="core"><stop offset="0" stop-color="{BLUE_SPEC}"/><stop offset=".45" stop-color="{BLUE_MID}"/>'
         '<stop offset="1" stop-color="#04060b" stop-opacity="0"/></radialGradient>'
+        '<radialGradient id="orb" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#4a5466"/>'
+        '<stop offset=".6" stop-color="#1c212b"/><stop offset="1" stop-color="#0a0c11"/></radialGradient>'
+        f'<radialGradient id="iris"><stop offset="0" stop-color="#fff0c4"/><stop offset=".5" stop-color="{AMBER}"/>'
+        '<stop offset="1" stop-color="#7d4c0c"/></radialGradient>'
         '<linearGradient id="slabL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#252c3a"/><stop offset="1" stop-color="#11151d"/></linearGradient>'
         '<linearGradient id="slabR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#191e29"/><stop offset="1" stop-color="#0a0d13"/></linearGradient>'
-        '<linearGradient id="wall" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#8fb0ff" stop-opacity=".2"/>'
-        '<stop offset="1" stop-color="#8fb0ff" stop-opacity="0"/></linearGradient>'
         f'<linearGradient id="holo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{BLUE_MID}" stop-opacity=".34"/>'
         f'<stop offset="1" stop-color="{BLUE_MID}" stop-opacity=".1"/></linearGradient>'
-        f'<linearGradient id="trunk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{BLUE_MID}"/>'
-        f'<stop offset=".45" stop-color="{BLUE_DEEP}"/><stop offset="1" stop-color="{BLUE_DEEP}" stop-opacity="0"/></linearGradient>'
         f'<linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{AMBER}" stop-opacity=".55"/>'
         f'<stop offset="1" stop-color="{AMBER}" stop-opacity=".05"/></linearGradient>'
         f'<linearGradient id="deep" gradientUnits="userSpaceOnUse" x1="0" y1="{num(P(N, N)[1] + 30)}" x2="0" y2="{num(P(N, N)[1] + 330)}">'
-        '<stop offset="0" stop-color="#07090e" stop-opacity="0"/>'
-        '<stop offset=".55" stop-color="#07090e" stop-opacity=".82"/><stop offset="1" stop-color="#07090e"/></linearGradient>'
+        '<stop offset="0" stop-color="#05070b" stop-opacity="0"/>'
+        '<stop offset=".55" stop-color="#05070b" stop-opacity=".82"/><stop offset="1" stop-color="#05070b"/></linearGradient>'
         '<filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="4"/></filter>'
         '<filter id="haze" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="22"/></filter>'
         "</defs>"
     )
 
 
-def scene(mark):
-    parts = [underside(), platform()]
-    ev_svg, lens = evaluator()
-    parts.append(ev_svg)
-    parts.extend(field(i, pos) for i, pos in enumerate(AGENTS))
+def atmosphere():
+    """Mist over the floor and motes of light drifting up."""
+    a = [
+        f'<ellipse cx="{x}" cy="{y}" rx="{rx}" ry="{ry}" fill="{BLUE_LIGHT}" opacity=".1" filter="url(#haze)" '
+        f'class="mist" style="animation-delay:-{k * 4}s"/>'
+        for k, (x, y, rx, ry) in enumerate(
+            (
+                (-300, 330, 190, 40),
+                (310, 300, 170, 36),
+                (0, 440, 230, 44),
+                (0, 150, 210, 34),
+            )
+        )
+    ]
+    rand = noise(11)
+    for k in range(30):
+        x, y = -560 + next(rand) * 1120, -300 + next(rand) * 800
+        a.append(
+            f'<circle cx="{num(x)}" cy="{num(y)}" r="{num(0.9 + next(rand) * 1.5)}" fill="{BLUE_SPEC}" class="mote" '
+            f'style="animation-duration:{7 + next(rand) * 7:.1f}s;animation-delay:-{next(rand) * 12:.1f}s"/>'
+        )
+    return "".join(a)
 
-    packets, targets, front = {}, {}, []
+
+def scene(mark):
+    sheet = []
+    parts = [backdrop(sheet), underside(sheet), platform(), rune_ring()]
+    parts.extend(pad(pos) for pos in AGENTS)
+
+    packets, targets, figures, arms = {}, {}, {}, {}
     paths = [control_path(pos) for pos in AGENTS]
     for i, pos in enumerate(AGENTS):
         holo, packets[i], targets[i] = hologram(i, pos)
-        figure = agent(i, pos) + holo
-        if sum(pos) < sum(
-            SHAFT
-        ):  # behind the shaft: figure first, its tentacle over it
-            parts.append(figure)
-        else:
-            front.append(figure)
-    parts.append(shaft())
-    cx, cy = P(*SHAFT)
-    for i, path in enumerate(paths):
-        parts.append(tentacle(path, 30, 9))
-        x0, y0 = path[0]
-        parts.append(
-            f'<circle cx="{num(x0)}" cy="{num(y0)}" r="5" fill="{BLUE_SPEC}" filter="url(#glow)" class="pulse p{i}"/>'
-            f'<circle cx="{num(x0)}" cy="{num(y0)}" r="3" fill="#fff" class="pulse p{i}"/>'
+        figures[i] = agent(i, pos) + holo
+        x0, y0 = paths[i][0]
+        arms[i] = moving(
+            tentacle(paths[i], 28, 9)
+            + f'<circle cx="{num(x0)}" cy="{num(y0)}" r="5" fill="{BLUE_SPEC}" filter="url(#glow)" class="pulse p{i}"/>'
+            f'<circle cx="{num(x0)}" cy="{num(y0)}" r="3" fill="#fff" class="pulse p{i}"/>',
+            paths[i][0],
+            paths[i][-1],
+            f"a{i}",
+            sheet,
+            6.5 + (i * 3 % 5) * 0.7,
+            skew=4.5,
+            curl=0.1,
         )
-    # The Tentaflake mark as a crystal crown over the shaft, in front of the arms' roots.
-    size = 112
-    parts.append(f'<ellipse cx="{num(cx)}" cy="{num(cy - 62)}" rx="62" ry="50" fill="{BLUE_MID}" opacity=".35" filter="url(#haze)"/>')
-    parts.append(f'<g class="float"><image href="data:image/webp;base64,{mark}" x="{num(cx - size / 2)}" '
-                 f'y="{num(cy - size - 6)}" width="{size}" height="{size}"/></g>')
-    parts.extend(front)
-    # Evaluator probes: one beam per network, in turn.
+    order = sorted(range(len(AGENTS)), key=lambda i: sum(AGENTS[i]))
+    back = [i for i in order if sum(AGENTS[i]) < 2 * C]
+    front = [i for i in order if sum(AGENTS[i]) >= 2 * C]
+
+    parts.extend(figures[i] for i in back)
+    parts.append(shaft())
+    parts.extend(arms[i] for i in back)
+    parts.append(eye_arm(sheet))
+    parts.append(kraken(mark, sheet))
+    parts.extend(arms[i] for i in front)
+    parts.extend(figures[i] for i in front)
+    parts.append(evaluator())
+    # The eye probes one network after the other.
     for i in range(len(AGENTS)):
         tx, ty = targets[i]
         parts.append(
             poly(
-                [lens, (tx - 20, ty), (tx + 20, ty)],
+                [EYE, (tx - 20, ty), (tx + 20, ty)],
                 "url(#beam)",
                 f' class="loop beam e{i}"',
             )
         )
-    return "".join(parts), paths, packets, lens
+    parts.append(atmosphere())
+    return "".join(parts), paths, packets, targets, sheet
 
 
-def labels(layout, lens, bounds):
+def labels(layout, targets, bounds):
     minx, top, maxx, bottom = bounds
     a = []
     if layout == "wide":
         a.append(
             text(
                 minx,
-                top + 16,
+                top + 18,
                 "AGENT HARNESS BENCHMARK",
-                size=13,
+                size=15,
                 fill=BLUE_LIGHT,
                 spacing=3,
             )
@@ -528,9 +902,9 @@ def labels(layout, lens, bounds):
         a.append(
             text(
                 minx,
-                top + 48,
+                top + 54,
                 "repair routing and firewall",
-                size=25,
+                size=28,
                 fill=INK,
                 weight=700,
             )
@@ -538,40 +912,52 @@ def labels(layout, lens, bounds):
         a.append(
             text(
                 minx,
-                top + 72,
+                top + 80,
                 "same task · isolated runs · independent checks",
-                size=13,
+                size=15,
             )
         )
 
-        def callout(x, y, anchor, lines, target, lead=None):
+        def callout(x, y, lines, target, lead):
             out = [
                 text(
                     x,
-                    y + 16 * k,
+                    y + 19 * k,
                     body,
-                    size=13,
+                    size=15,
                     fill=INK if k == 0 else MUTED,
-                    anchor=anchor,
                     spacing=2 if k == 0 else None,
                 )
                 for k, body in enumerate(lines)
             ]
-            start = lead or (x + (8 if anchor == "end" else -8), y - 4)
             out.append(
-                f'<path d="{seg(start, target)}" stroke="{DIM}" stroke-width="1"/>'
+                f'<path d="{seg(lead, target)}" stroke="{DIM}" stroke-width="1"/>'
                 f'<circle cx="{num(target[0])}" cy="{num(target[1])}" r="2.5" fill="{MUTED}"/>'
             )
             return out
 
-        a += callout(maxx - 250, top + 16, "start", ("03 INDEPENDENT EVALUATOR", "on its own plate, outside", "the harness"),
-                     (lens[0] + 46, lens[1] - 10))
-        arm = control_path(AGENTS[0])[20]
-        a += callout(minx, top + 118, "start", ("01 HARNESS", "rises from below,", "holds every agent"),
-                     (arm[0] - 12, arm[1] - 10), lead=(minx + 152, top + 132))
-        field_corner = P(AGENTS[1][0] + FIELD, AGENTS[1][1] - FIELD)
-        a += callout(maxx - 250, top + 100, "start", ("02 ISOLATED LINUX NETWORK", "one per agent"),
-                     (field_corner[0], field_corner[1] - 4))
+        a += callout(
+            minx,
+            top + 136,
+            ("01 HARNESS", "drawn as Tentaflake: holds", "every agent and the eye"),
+            (HEAD[0] - 108, HEAD[1] - 34),
+            (minx + 244, top + 150),
+        )
+        right = maxx - 292
+        a += callout(
+            right,
+            top + 18,
+            ("03 EVALUATOR", "checks every network from", "outside the agent's run"),
+            (EYE[0] - 24, EYE[1] - 34),
+            (right + 60, top + 68),
+        )
+        a += callout(
+            maxx - 150,
+            top + 296,
+            ("02 ISOLATED", "LINUX NETWORK", "one per agent"),
+            (targets[2][0] + 6, targets[2][1] - 14),
+            (maxx - 144, top + 342),
+        )
         y = bottom - 8
         x = minx
         for colour, body in (
@@ -580,112 +966,153 @@ def labels(layout, lens, bounds):
             (BAD, "check fails"),
         ):
             a.append(
-                f'<circle cx="{num(x + 6)}" cy="{num(y - 4.5)}" r="5.5" fill="{colour}"/>'
+                f'<circle cx="{num(x + 7)}" cy="{num(y - 5)}" r="6.5" fill="{colour}"/>'
             )
-            a.append(text(x + 18, y, body, size=13, fill=INK))
-            x += 18 + len(body) * 7.9 + 22
+            a.append(text(x + 22, y, body, size=15, fill=INK))
+            x += 22 + len(body) * 9.1 + 26
         a.append(
             text(
                 maxx,
                 y,
                 "illustration · synthetic · no scores",
-                size=12,
+                size=14,
                 fill=DIM,
                 anchor="end",
             )
         )
     else:
-        a.append(text(minx, top + 26, "AGENT HARNESS BENCHMARK", size=24, fill=BLUE_LIGHT, spacing=4))
-        a.append(text(minx, top + 76, "repair routing and firewall", size=42, fill=INK, weight=700))
+        a.append(
+            text(
+                minx,
+                top + 28,
+                "AGENT HARNESS BENCHMARK",
+                size=27,
+                fill=BLUE_LIGHT,
+                spacing=4,
+            )
+        )
+        a.append(
+            text(
+                minx,
+                top + 84,
+                "repair routing and firewall",
+                size=47,
+                fill=INK,
+                weight=700,
+            )
+        )
         y = bottom + 4
-        rows = (("01", "the harness rises from below"), ("", "and holds every agent"),
-                ("02", "one isolated Linux network"), ("", "per agent, same task"),
-                ("03", "an independent evaluator,"), ("", "outside the harness"))
+        rows = (
+            ("01", "the harness, drawn as Tentaflake,"),
+            ("", "holds every agent and the eye"),
+            ("02", "one isolated Linux network"),
+            ("", "per agent, same task"),
+            ("03", "the evaluator checks from"),
+            ("", "outside the agent's run"),
+        )
         for tag, body in rows:
-            y += 54 if tag else 42
-            a.append(text(minx, y, tag, size=32, fill=BLUE_LIGHT))
-            a.append(text(minx + 64, y, body, size=32, fill=INK if tag else MUTED))
-        y += 34
-        for colour, body in ((OK, "web reachable"), (OK, "admin blocked"), (BAD, "check fails")):
-            y += 48
-            a.append(f'<circle cx="{num(minx + 16)}" cy="{num(y - 11)}" r="13" fill="{colour}"/>')
-            a.append(text(minx + 64, y, body, size=32, fill=INK))
-        y += 66
-        a.append(text(minx, y, "illustration · synthetic runs", size=24, fill=DIM))
-        a.append(text(minx, y + 32, "and outcomes · no scores", size=24, fill=DIM))
-        bottom = y + 32
+            y += 60 if tag else 47
+            a.append(text(minx, y, tag, size=36, fill=BLUE_LIGHT))
+            a.append(text(minx + 72, y, body, size=36, fill=INK if tag else MUTED))
+        y += 38
+        for colour, body in (
+            (OK, "web reachable"),
+            (OK, "admin blocked"),
+            (BAD, "check fails"),
+        ):
+            y += 54
+            a.append(
+                f'<circle cx="{num(minx + 18)}" cy="{num(y - 12)}" r="14.5" fill="{colour}"/>'
+            )
+            a.append(text(minx + 72, y, body, size=36, fill=INK))
+        y += 74
+        a.append(text(minx, y, "illustration · synthetic runs", size=27, fill=DIM))
+        a.append(text(minx, y + 36, "and outcomes · no scores", size=27, fill=DIM))
+        bottom = y + 36
     return a, bottom
 
 
-def style(paths, packets):
+def style(paths, packets, sheet):
     rules = [
         f"text{{font-family:{FONT}}}",
         f".loop{{animation-duration:{LOOP}s;animation-iteration-count:infinite;animation-timing-function:ease-in-out}}",
+        ".arm{transform-origin:0 0;animation-iteration-count:infinite;animation-direction:alternate;animation-timing-function:ease-in-out}",
         ".breathe{animation:breathe 4s ease-in-out infinite alternate}",
-        "@keyframes breathe{from{opacity:.65}to{opacity:1}}",
-        ".float{animation:float 5s ease-in-out infinite alternate}",
-        "@keyframes float{from{transform:translateY(0)}to{transform:translateY(-6px)}}",
-        ".hover{animation:float 3.6s ease-in-out infinite alternate}",
+        "@keyframes breathe{from{opacity:.6}to{opacity:1}}",
+        ".gaze{animation:gaze 5s ease-in-out infinite alternate}",
+        "@keyframes gaze{from{opacity:.55}to{opacity:1}}",
         ".stand{animation:stand 3.4s ease-in-out infinite alternate}",
         "@keyframes stand{from{transform:translateY(0)}to{transform:translateY(-1.5px)}}",
         ".visor{animation:visor 3.4s ease-in-out infinite}",
         "@keyframes visor{0%,70%{opacity:.75}85%{opacity:1}100%{opacity:.75}}",
-        ".sway{transform-box:fill-box;animation:sway 9s ease-in-out infinite alternate}",
-        "@keyframes sway{from{transform:rotate(-1.6deg)}to{transform:rotate(1.6deg)}}",
-        ".sway2{transform-box:fill-box;transform-origin:50% 100%;animation:sway2 7s ease-in-out infinite alternate}",
-        "@keyframes sway2{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}",
+        ".halo{transform-origin:0 0;animation:halo 160s linear infinite}",
+        f"@keyframes halo{{from{{transform:translate({num(HEAD[0])}px,{num(HEAD[1] - 122)}px) rotate(0deg)}}"
+        f"to{{transform:translate({num(HEAD[0])}px,{num(HEAD[1] - 122)}px) rotate(360deg)}}}}",
+        ".rune{transform-origin:0 0;animation:rune 120s linear infinite}",
+        f"@keyframes rune{{from{{transform:translate(0px,{num(CY)}px) scale(1,.5) rotate(0deg)}}"
+        f"to{{transform:translate(0px,{num(CY)}px) scale(1,.5) rotate(-360deg)}}}}",
+        ".mist{animation:mist 16s ease-in-out infinite alternate}",
+        "@keyframes mist{from{transform:translateX(-36px)}to{transform:translateX(36px)}}",
+        ".mote{opacity:.4;animation-name:mote;animation-iteration-count:infinite;animation-timing-function:linear}",
+        "@keyframes mote{0%{opacity:0;transform:translateY(0)}25%{opacity:.8}100%{opacity:0;transform:translateY(-80px)}}",
         ".pulse{opacity:0;animation-duration:3.4s;animation-iteration-count:infinite;animation-timing-function:linear}",
         ".packet{animation-duration:2.6s;animation-iteration-count:infinite;animation-timing-function:linear}",
         ".shut,.beam{opacity:0}",
     ]
+    rules += sheet
     for i, path in enumerate(paths):
-        done = FIXED[i]
         probe = PROBE_START + PROBE_STEP * i
-        (rx, ry), (gx, gy), (wx, wy) = packets[i]
         rules += [
             f".p{i}{{animation-name:p{i};animation-delay:{-0.85 * i:.2f}s}}",
             pulse_track(f"p{i}", path),
-            f".k{i}{{animation-name:k{i};animation-delay:{-0.6 * i:.1f}s}}",
-            f"@keyframes k{i}{{0%{{transform:translate(0,0);opacity:0}}10%{{opacity:1}}"
-            f"50%{{transform:translate({num(gx - rx)}px,{num(gy - ry)}px);opacity:1}}"
-            f"90%{{transform:translate({num(wx - rx)}px,{num(wy - ry)}px);opacity:1}}"
-            f"100%{{transform:translate({num(wx - rx)}px,{num(wy - ry)}px);opacity:0}}}}",
-            f".s{i}{{animation-name:s{i}}}.o{i}{{animation-name:o{i}}}",
-            f"@keyframes s{i}{{0%,{done}%{{opacity:1}}{done + 2}%,97%{{opacity:0}}100%{{opacity:1}}}}",
-            f"@keyframes o{i}{{0%,{done}%{{opacity:0}}{done + 3}%,97%{{opacity:1}}100%{{opacity:0}}}}",
             f".e{i}{{animation-name:e{i}}}.l{i}{{animation-name:l{i}}}",
             f"@keyframes e{i}{{0%,{probe}%{{opacity:0}}{probe + 1}%,{probe + PROBE_STEP - 1}%{{opacity:1}}{probe + PROBE_STEP}%,100%{{opacity:0}}}}",
             f"@keyframes l{i}{{0%,{probe + 3}%{{opacity:0}}{probe + 5}%,97%{{opacity:1}}100%{{opacity:0}}}}",
         ]
+        if packets[i]:
+            done = FIXED[i]
+            (rx, ry), (gx, gy), (wx, wy) = packets[i]
+            rules += [
+                f".q{i}{{animation-name:q{i};animation-delay:{-0.6 * i:.1f}s}}",
+                f"@keyframes q{i}{{0%{{transform:translate(0,0);opacity:0}}10%{{opacity:1}}"
+                f"50%{{transform:translate({num(gx - rx)}px,{num(gy - ry)}px);opacity:1}}"
+                f"90%{{transform:translate({num(wx - rx)}px,{num(wy - ry)}px);opacity:1}}"
+                f"100%{{transform:translate({num(wx - rx)}px,{num(wy - ry)}px);opacity:0}}}}",
+                f".s{i}{{animation-name:s{i}}}.o{i}{{animation-name:o{i}}}",
+                f"@keyframes s{i}{{0%,{done}%{{opacity:1}}{done + 2}%,97%{{opacity:0}}100%{{opacity:1}}}}",
+                f"@keyframes o{i}{{0%,{done}%{{opacity:0}}{done + 3}%,97%{{opacity:1}}100%{{opacity:0}}}}",
+            ]
     rules.append("@media (prefers-reduced-motion:reduce){*{animation:none!important}}")
     return "".join(rules)
 
 
 TITLE = "Agent harness benchmark (illustration)"
 DESC = (
-    "Illustration with synthetic data. A dark isometric platform floats above a glow. From a shaft in its "
-    "centre, around the crystal Tentaflake mark, blue tentacles rise and hold four dark, armoured agents "
-    "from above: the harness. Two larger tentacles reach around the platform from below. Each agent stands "
-    "in its own marked field beside a hologram of its isolated Linux network with a client, a router, a "
-    "firewall and the services web and admin. An evaluator drone hovers on a separate plate, attached to "
-    "no tentacle, and probes each network in turn; lamps show whether web is reachable and admin is "
-    "blocked. The task is 'repair routing and firewall'. The outcomes are invented for the picture."
+    "Illustration with synthetic data. A dark isometric platform floats above a blue glow. From a shaft "
+    "in its centre rises Tentaflake as a giant crystal kraken: a faceted head with two narrow glowing "
+    "eyes, a beard of tentacles, and the Tentaflake mark as its crown inside a faint halo. Its arms are "
+    "the harness. Eight of them dock from above on eight dark, armoured agents, one holds the "
+    "evaluator's amber eye aloft, and larger ones reach around the platform from below. Each agent "
+    "stands on its own pad beside a hologram of its isolated Linux network with a client, a router, a "
+    "firewall and the services web and admin. The eye probes each network in turn; lamps show whether "
+    "web is reachable and admin is blocked. The task is 'repair routing and firewall'. The outcomes "
+    "are invented for the picture."
 )
 
 
 def render(layout, mark):
-    body, paths, packets, lens = scene(mark)
+    body, paths, packets, targets, sheet = scene(mark)
     minx, maxx = -N * HW - 76, N * HW + 76
-    top = -262 if layout == "wide" else -322
+    top = -386 if layout == "wide" else -446
     bottom = P(N, N)[1] + (196 if layout == "wide" else 180)
-    extra, bottom = labels(layout, lens, (minx, top, maxx, bottom))
+    extra, bottom = labels(layout, targets, (minx, top, maxx, bottom))
     m = 26
     x, y, w, h = minx - m, top - m, maxx - minx + 2 * m, bottom - top + 2 * m
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{num(x)} {num(y)} {num(w)} {num(h)}" '
         f'width="{num(w)}" height="{num(h)}" role="img" aria-labelledby="t d">'
         f'<title id="t">{TITLE}</title><desc id="d">{DESC}</desc>'
-        f"<style>{style(paths, packets)}</style>{defs(mark)}"
+        f"<style>{style(paths, packets, sheet)}</style>{defs()}"
         f'<rect x="{num(x)}" y="{num(y)}" width="{num(w)}" height="{num(h)}" rx="18" fill="url(#bg)"/>'
         f"{body}{''.join(extra)}</svg>\n"
     )
