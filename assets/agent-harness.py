@@ -3,7 +3,7 @@
 
 A dark isometric platform for one agent-harness benchmark task, "repair routing and
 firewall". Tentaflake rises from a shaft in its centre as a giant crystal kraken: the
-Tentaflake mark is its crown, and its arms are the harness. They dock on every agent
+Tentaflake mark is its head, and its arms are the harness. They dock on every agent
 from above, hold the evaluator's eye aloft and reach around the platform from below.
 Each agent stands on its own pad with a hologram of its isolated Linux network (client,
 router, firewall, web, admin). The eye probes every network in turn: web must be
@@ -31,7 +31,8 @@ LOOP = 20  # seconds
 FONT = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace"
 
 SHAFT_R = 1.6
-HEAD = (0.0, -25.0)  # screen centre of the kraken's head
+HEAD = (0.0, -84.0)  # screen centre of the kraken's head: the Tentaflake mark
+MARK, MARK_CENTRE = 384, 0.475  # drawn size of the mark, height of its centre in the image
 EYE = (352.0, -176.0)  # screen centre of the evaluator's eye
 AGENT_SCALE = 1.08
 AGENT_H = 94 * AGENT_SCALE  # pixels from feet to crown
@@ -298,7 +299,7 @@ def backdrop(sheet):
         a.append(
             f'<g opacity=".5">{moving(tentacle(curve, 46, 9), curve[0], curve[-1], "bl"[sign > 0] + "a", sheet, 9, swing=2.4, curl=0.14)}</g>'
         )
-    hx, hy = HEAD[0], HEAD[1] - 122
+    hx, hy = HEAD
     ticks = "".join(
         seg(
             (
@@ -315,8 +316,8 @@ def backdrop(sheet):
         for k in range(18)
     )
     a.append(
-        f'<ellipse cx="{num(hx)}" cy="{num(hy + 30)}" rx="210" ry="190" fill="{BLUE_MID}" opacity=".3" filter="url(#haze)"/>'
-        f'<g transform="translate({num(hx)} {num(hy)})" class="halo" opacity=".42" stroke="{BLUE_LIGHT}" fill="none">'
+        f'<ellipse cx="{num(hx)}" cy="{num(hy + 20)}" rx="250" ry="220" fill="{BLUE_MID}" opacity=".3" filter="url(#haze)"/>'
+        f'<g transform="translate({num(hx)} {num(hy)}) scale(1.27)" class="halo" opacity=".42" stroke="{BLUE_LIGHT}" fill="none">'
         f'<circle r="166" stroke-width="1.2"/><circle r="139" stroke-width=".8"/><circle r="115" stroke-width=".8"/>'
         f'<path d="{ticks}" stroke-width="1"/><g stroke-width="1.1" opacity=".8">{signs}</g>'
         f'<path d="M0 -139L120.4 69.5L-120.4 69.5Z" stroke-width=".8" opacity=".7"/>'
@@ -470,131 +471,94 @@ def shaft():
 
 # --- the kraken ------------------------------------------------------------------
 
-HEAD_A, HEAD_B, HEAD_D, HEAD_TILT = 112, 138, 104, math.radians(16)
-HEAD_LATS = (-62, -46, -30, -12, 8, 30, 52, 72, 90)
-BROW = 2  # index of the first band drawn over the roots of the face tentacles
+
+def mark_point(u, v):
+    """Screen position of a point given as fractions of the Tentaflake mark's square image."""
+    return HEAD[0] + (u - 0.5) * MARK, HEAD[1] + (v - MARK_CENTRE) * MARK
 
 
-def head_point(lat, lon):
-    """A point on the kraken's head: a pear-shaped dome, seen slightly from above."""
-    phi, lam = math.radians(lat), math.radians(lon)
-    taper = 1.0 if lat >= 30 else 1 - 0.42 * ((30 - lat) / 92) ** 1.25  # wide skull, narrow face
-    x = HEAD_A * taper * math.cos(phi) * math.sin(lam)
-    y = HEAD_B * math.sin(phi)
-    z = HEAD_D * taper * math.cos(phi) * math.cos(lam)
-    up = y * math.cos(HEAD_TILT) - z * math.sin(HEAD_TILT)
-    depth = y * math.sin(HEAD_TILT) + z * math.cos(HEAD_TILT)
-    return x, up, depth
+def core():
+    """The dark mass behind the mark: it fills the gap between the crystals and ends in a chin."""
+    top, chin = mark_point(0.5, 0.33), mark_point(0.5, 0.925)
+    ridge = mark_point(0.5, 0.6)
+    left = [mark_point(0.36, 0.42), mark_point(0.33, 0.66), mark_point(0.38, 0.83)]
+    right = [mark_point(1 - u, v) for u, v in ((0.36, 0.42), (0.33, 0.66), (0.38, 0.83))]
+    edge = ' stroke="#040a1c" stroke-width="1" stroke-linejoin="round"'
+    return "".join(
+        (
+            poly([top, left[0], left[1], ridge], "#0e2a68", edge),
+            poly([ridge, left[1], left[2], chin], "#0a1f4f", edge),
+            poly([top, right[0], right[1], ridge], "#081a42", edge),
+            poly([ridge, right[1], right[2], chin], "#06122e", edge),
+        )
+    )
 
 
-def head(bands):
-    """The given latitude bands of the head as flat-shaded crystal facets, lit from the upper left."""
-    light = (-0.5, 0.62, 0.6)
-    scale = math.sqrt(sum(v * v for v in light))
-    faces = []
-    for i in bands:
-        for j in range(16):
-            lon = j * 22.5
-            quad = [
-                head_point(HEAD_LATS[i], lon),
-                head_point(HEAD_LATS[i], lon + 22.5),
-                head_point(HEAD_LATS[i + 1], lon + 22.5),
-                head_point(HEAD_LATS[i + 1], lon),
-            ]
-            u = [quad[2][k] - quad[0][k] for k in range(3)]
-            v = [quad[3][k] - quad[1][k] for k in range(3)]
-            normal = [
-                u[1] * v[2] - u[2] * v[1],
-                u[2] * v[0] - u[0] * v[2],
-                u[0] * v[1] - u[1] * v[0],
-            ]
-            centre = [sum(p[k] for p in quad) / 4 for k in range(3)]
-            if sum(normal[k] * centre[k] for k in range(3)) < 0:
-                normal = [-c for c in normal]
-            if normal[2] <= 0:
-                continue
-            length = math.sqrt(sum(c * c for c in normal))
-            lit = sum(normal[k] * light[k] for k in range(3)) / length / scale
-            lit = min(1, max(0, lit + ((i * 7 + j * 13) % 5 - 2) * 0.03))
-            if lit < 0.5:
-                colour = mix("#060f26", "#143c8f", lit / 0.5)
-            elif lit < 0.85:
-                colour = mix("#143c8f", "#2f74ea", (lit - 0.5) / 0.35)
-            else:
-                colour = mix("#2f74ea", "#8cc0ff", (lit - 0.85) / 0.15)
-            outline = [(HEAD[0] + p[0], HEAD[1] - p[1]) for p in quad]
-            if HEAD_LATS[i + 1] == 90:
-                outline = outline[:3]
-            faces.append(
-                f'<path d="M{pts(outline)}Z" fill="{colour}" stroke="#050c1f" stroke-width=".9" stroke-linejoin="round"/>'
-            )
-    return "".join(faces)
-
-
-def face():
-    """Two narrow glowing eyes under dark brows."""
+def gaze(lit):
+    """The mark's two drops as the kraken's eyes: a glow behind them, a lit core on top."""
     a = []
     for sign in (-1, 1):
-        x, up, _ = head_point(-3, sign * 31)
-        ex, ey = HEAD[0] + x, HEAD[1] - up
-
-        def at(points):
-            return [(ex + sign * px, ey + py) for px, py in points]
-
-        slit = at([(-25, 8), (-7, 0), (25, -9), (9, 4), (-9, 8)])
-        a.append(poly(at([(-31, 7), (-9, -11), (32, -20), (25, -9), (-7, 0), (-25, 8)]), "#040a1c"))
-        a.append(poly(slit, "#7fd4ff", ' filter="url(#glow)" class="gaze"'))
-        a.append(poly(slit, "#e9f8ff", ' class="gaze"'))
+        x, y = mark_point(0.5 + sign * 0.057, 0.665)
+        turn = f' transform="rotate({sign * 24} {num(x)} {num(y)})" class="gaze"'
+        if lit:
+            a.append(
+                f'<ellipse cx="{num(x)}" cy="{num(y)}" rx="{num(MARK * 0.011)}" ry="{num(MARK * 0.03)}" fill="#f1fbff"{turn}/>'
+            )
+        else:
+            a.append(
+                f'<ellipse cx="{num(x)}" cy="{num(y)}" rx="{num(MARK * 0.035)}" ry="{num(MARK * 0.06)}" fill="#8fdcff" '
+                f'opacity=".9" filter="url(#glow)"{turn}/>'
+            )
     return "".join(a)
 
 
 def beard(sheet):
-    """The face tentacles: they hang from under the eyes, over the body, down to the shaft."""
+    """The face tentacles: they grow from under the mark's lower crystals and hang down to the shaft."""
+    roots = ((0.763, 0.585), (0.69, 0.655), (0.622, 0.715), (0.558, 0.76), (0.5, 0.77))
     a = []
-    for k, lon in enumerate((-72, 72, -54, 54, -36, 36, -18, 18, 0)):
-        x, up, _ = head_point(-22, lon)
-        rx, ry = HEAD[0] + x, HEAD[1] - up
-        sign = (lon > 0) - (lon < 0)
-        spread = abs(lon) / 72
-        length = 218 - 96 * spread
-        end = (rx * 1.28 + sign * (20 + 26 * spread), ry + length - 22 * spread)
-        curve = bezier(
-            (rx, ry),
-            (rx - sign * 8, ry + length * 0.45),
-            (rx * 1.2 - sign * 10, ry + length + 14),
-            end,
-            18,
-        )
-        a.append(
-            moving(
-                tentacle(curve, 37 - 7 * spread, 8),
-                curve[0],
-                curve[-1],
-                f"f{k}",
-                sheet,
-                6 + k * 0.55,
-                swing=2.2,
-                curl=0.34 if sign else 0,
+    for k, (u, v) in enumerate(roots):
+        for sign in (-1, 1) if u != 0.5 else (0,):
+            rx, ry = mark_point(0.5 + sign * (u - 0.5), v)
+            spread = (u - 0.5) / 0.263
+            length = 196 - 92 * spread
+            end = (rx * 1.26 + sign * (18 + 28 * spread), ry + length - 22 * spread)
+            curve = bezier(
+                (rx, ry),
+                (rx - sign * 8, ry + length * 0.45),
+                (rx * 1.18 - sign * 10, ry + length + 14),
+                end,
+                18,
             )
-        )
+            a.append(
+                moving(
+                    tentacle(curve, 38 - 8 * spread, 8),
+                    curve[0],
+                    curve[-1],
+                    f"f{k}{'lcr'[sign + 1]}",
+                    sheet,
+                    6 + k * 0.7 + sign * 0.4,
+                    swing=2.2,
+                    curl=0.34 if sign else 0,
+                )
+            )
     return "".join(a)
 
 
 def kraken(mark, sheet):
-    """Body, head, face tentacles and the Tentaflake mark as its crystal crown."""
+    """Body and face tentacles, and the Tentaflake mark itself as the kraken's head."""
     hx, hy = HEAD
-    column = bezier((0, CY + 14), (-10, CY - 60), (8, hy + 150), (0, hy + 84), 14)
-    size = 284
-    bands = range(len(HEAD_LATS) - 1)
+    neck = mark_point(0.5, 0.8)
+    column = bezier((0, CY + 14), (-10, CY - 60), (8, neck[1] + 70), neck, 14)
+    x, y = mark_point(0, 0)
     return "".join(
         (
-            f'<g opacity=".8">{tentacle(column, 92, 120, suckers=False)}</g>',
-            head(bands[:BROW]),
+            f'<g opacity=".8">{tentacle(column, 92, 112, suckers=False)}</g>',
             beard(sheet),
-            head(bands[BROW:]),
-            face(),
-            f'<ellipse cx="{num(hx)}" cy="{num(hy - 136)}" rx="130" ry="98" fill="{BLUE_MID}" opacity=".3" filter="url(#haze)" class="breathe"/>',
-            f'<image href="data:image/webp;base64,{mark}" x="{num(hx - size / 2)}" y="{num(hy - 284)}" width="{size}" height="{size}"/>',
+            core(),
+            f'<ellipse cx="{num(hx)}" cy="{num(hy)}" rx="170" ry="130" fill="{BLUE_MID}" opacity=".3" filter="url(#haze)" class="breathe"/>',
+            gaze(False),
+            f'<image href="data:image/webp;base64,{mark}" x="{num(x)}" y="{num(y)}" width="{MARK}" height="{MARK}"/>',
+            gaze(True),
         )
     )
 
@@ -741,7 +705,7 @@ def hologram(i, pos):
 def eye_arm(sheet):
     """The arm that holds the evaluator's eye aloft, rising from behind the kraken's head."""
     ex, ey = EYE
-    curve = bezier((34, 60), (128, -214), (286, -28), (ex - 5, ey + 37), 30)
+    curve = bezier((40, 20), (150, -250), (286, -28), (ex - 5, ey + 37), 30)
     return moving(
         tentacle(curve, 38, 13), curve[0], curve[-1], "ey", sheet, 8, skew=3.2, curl=0.1
     )
@@ -940,7 +904,7 @@ def labels(layout, targets, bounds):
             minx,
             top + 136,
             ("01 HARNESS", "drawn as Tentaflake: holds", "every agent and the eye"),
-            (HEAD[0] - 108, HEAD[1] - 34),
+            mark_point(0.2, 0.33),
             (minx + 244, top + 150),
         )
         right = maxx - 292
@@ -1046,8 +1010,8 @@ def style(paths, packets, sheet):
         ".visor{animation:visor 3.4s ease-in-out infinite}",
         "@keyframes visor{0%,70%{opacity:.75}85%{opacity:1}100%{opacity:.75}}",
         ".halo{transform-origin:0 0;animation:halo 160s linear infinite}",
-        f"@keyframes halo{{from{{transform:translate({num(HEAD[0])}px,{num(HEAD[1] - 122)}px) rotate(0deg)}}"
-        f"to{{transform:translate({num(HEAD[0])}px,{num(HEAD[1] - 122)}px) rotate(360deg)}}}}",
+        f"@keyframes halo{{from{{transform:translate({num(HEAD[0])}px,{num(HEAD[1])}px) scale(1.27) rotate(0deg)}}"
+        f"to{{transform:translate({num(HEAD[0])}px,{num(HEAD[1])}px) scale(1.27) rotate(360deg)}}}}",
         ".rune{transform-origin:0 0;animation:rune 120s linear infinite}",
         f"@keyframes rune{{from{{transform:translate(0px,{num(CY)}px) scale(1,.5) rotate(0deg)}}"
         f"to{{transform:translate(0px,{num(CY)}px) scale(1,.5) rotate(-360deg)}}}}",
@@ -1089,8 +1053,8 @@ def style(paths, packets, sheet):
 TITLE = "Agent harness benchmark (illustration)"
 DESC = (
     "Illustration with synthetic data. A dark isometric platform floats above a blue glow. From a shaft "
-    "in its centre rises Tentaflake as a giant crystal kraken: a faceted head with two narrow glowing "
-    "eyes, a beard of tentacles, and the Tentaflake mark as its crown inside a faint halo. Its arms are "
+    "in its centre rises Tentaflake as a giant crystal kraken. Its head is the Tentaflake mark itself, "
+    "large inside a faint halo, with two glowing drops as eyes and a beard of tentacles below. Its arms are "
     "the harness. Eight of them dock from above on eight dark, armoured agents, one holds the "
     "evaluator's amber eye aloft, and larger ones reach around the platform from below. Each agent "
     "stands on its own pad beside a hologram of its isolated Linux network with a client, a router, a "
