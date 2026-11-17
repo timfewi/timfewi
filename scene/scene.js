@@ -1,4 +1,5 @@
 import * as T from "three";
+import { markOutline } from "./mark-outline.js";
 
 const tau = 2 * Math.PI;
 const vec = (x, y, z) => new T.Vector3(x, y, z);
@@ -70,18 +71,10 @@ const armor = metal(0x44546e, 0.56, 0.37),
 const deck = metal(0x263851, 0.48, 0.48),
   bevel = metal(0x435776),
   night = metal(0x101b30);
-const blue = new T.MeshPhysicalMaterial({
-  color: 0x1752cc,
-  metalness: 0.5,
-  roughness: 0.24,
-  clearcoat: 0.78,
-  clearcoatRoughness: 0.22,
-});
 const ice = metal(0x45aeef, 0.38, 0.25),
-  cyan = flat(0x80e6ff),
-  gold = metal(0xca8430, 0.66, 0.26);
-const lightGold = flat(0xffcf78),
-  darkGlass = metal(0x172039, 0.65, 0.19);
+  cyan = flat(0x80e6ff);
+const jobAmber = flat(0xffb75b),
+  jobGreen = flat(0x61e9b2);
 function light(color, intensity, position) {
   const l = new T.DirectionalLight(color, intensity);
   l.position.set(...position);
@@ -132,7 +125,9 @@ function studioEnvironment() {
 studioEnvironment();
 
 // The square host is machined in stacked layers. Its diamond silhouette comes from the camera.
-const slab = group(scene);
+const floor = group(scene);
+floor.scale.set(1.16, 1, 1.16);
+const slab = group(floor);
 slab.rotation.y = Math.PI / 4;
 box(slab, 0, -0.28, 0, 8.38, 0.47, 8.38, night);
 box(slab, 0, -0.071, 0, 8.43, 0.035, 8.43, metal(0x3771aa));
@@ -190,148 +185,51 @@ function aura(parent, color, radius, position) {
   parent.add(sprite);
 }
 aura(scene, 0x245fcf, 3.6, [0, 3.65, -2.1]);
-const halo = group(scene, 0, 4.02, -1.25);
-halo.quaternion.copy(camera.quaternion);
-const haloMat = new T.MeshBasicMaterial({
-  color: 0x527bbe,
-  transparent: true,
-  opacity: 0.38,
-});
-for (const r of [2.04, 2.32]) hoop(halo, 0, 0, 0, r, 0.008, haloMat);
-for (let i = 0; i < 60; i++) {
-  const a = (tau * i) / 60,
-    r = i % 5 === 0 ? 2.13 : 2.22;
-  line(
-    halo,
-    [
-      [r * Math.cos(a), r * Math.sin(a), 0],
-      [2.29 * Math.cos(a), 2.29 * Math.sin(a), 0],
-    ],
-    0x4673ae,
-    0.58,
-  );
-}
 
-// Build a solid relief from the actual transparent brand mark. The sampled silhouette
-// defines both faces and the edge walls, including the gaps between the crystal forks.
+// The alpha outline is authored once. Rendering the mark never reads canvas
+// pixels, which some browsers deliberately randomise for fingerprint protection.
 const mark = await new T.TextureLoader().loadAsync("/mark.webp");
 mark.colorSpace = T.SRGBColorSpace;
-function crystalRelief(tex) {
-  const size = 130,
-    stride = size + 1;
-  const c = document.createElement("canvas");
-  c.width = c.height = stride;
-  const ctx = c.getContext("2d");
-  ctx.drawImage(tex.image, 0, 0, stride, stride);
-  const pixels = ctx.getImageData(0, 0, stride, stride).data;
-  const positions = [],
-    uv = [],
-    faces = [],
-    sides = [],
-    boundary = [];
-  const alpha = (i) => pixels[4 * i + 3],
-    threshold = 125;
-  const vertices = new Map();
-  function vertex(a, b = a) {
-    const key = Math.min(a, b) * stride * stride + Math.max(a, b);
-    if (vertices.has(key)) return vertices.get(key);
-    const t = a === b ? 0 : (threshold - alpha(a)) / (alpha(b) - alpha(a));
-    const u = ((a % stride) * (1 - t) + (b % stride) * t) / size;
-    const v =
-      (Math.floor(a / stride) * (1 - t) + Math.floor(b / stride) * t) / size;
-    const dome = Math.max(
-      0,
-      1 - ((u - 0.5) * 1.8) ** 2 - ((v - 0.62) * 1.5) ** 2,
+function contourPoints(coords) {
+  const points = [];
+  for (let i = 0; i < coords.length; i += 2)
+    points.push(
+      new T.Vector2(
+        (coords[i] / 200 - 0.5) * 4.9,
+        (0.5 - coords[i + 1] / 200) * 4.9,
+      ),
     );
-    const i = positions.length / 3;
-    positions.push((u - 0.5) * 4.9, (0.5 - v) * 4.9, 0.04 + 0.3 * dome);
-    uv.push(u, 1 - v);
-    vertices.set(key, i);
-    return i;
-  }
-  function triangle(a, b, c) {
-    const clipped = [],
-      crossings = [];
-    for (const [i, j] of [
-      [a, b],
-      [b, c],
-      [c, a],
-    ]) {
-      if (alpha(i) >= threshold) clipped.push(vertex(i));
-      if (alpha(i) >= threshold !== alpha(j) >= threshold) {
-        const cut = vertex(i, j);
-        clipped.push(cut);
-        crossings.push(cut);
-      }
-    }
-    for (let k = 1; k + 1 < clipped.length; k++)
-      faces.push(clipped[0], clipped[k], clipped[k + 1]);
-    if (crossings.length === 2) boundary.push(crossings);
-  }
-  for (let y = 0; y < size; y++)
-    for (let x = 0; x < size; x++) {
-      const a = y * stride + x,
-        b = a + 1,
-        c = a + stride,
-        d = c + 1;
-      triangle(a, c, b);
-      triangle(b, c, d);
-    }
-  const backOffset = positions.length / 3;
-  for (let i = 0; i < backOffset; i++) {
-    positions.push(
-      positions[3 * i],
-      positions[3 * i + 1],
-      positions[3 * i + 2] - 0.15,
-    );
-    uv.push(uv[2 * i], uv[2 * i + 1]);
-  }
-  for (let i = 0; i < faces.length; i += 3) {
-    sides.push(
-      backOffset + faces[i],
-      backOffset + faces[i + 2],
-      backOffset + faces[i + 1],
-    );
-  }
-  // Separate wall normals keep the crystal face smooth right out to its silhouette.
-  for (const [i, j] of boundary) {
-    const start = positions.length / 3;
-    for (const [idx, dz] of [
-      [i, 0],
-      [j, 0],
-      [j, -0.15],
-      [i, -0.15],
-    ]) {
-      positions.push(
-        positions[idx * 3],
-        positions[idx * 3 + 1],
-        positions[idx * 3 + 2] + dz,
-      );
-      uv.push(uv[2 * idx], uv[2 * idx + 1]);
-    }
-    sides.push(start, start + 1, start + 2, start, start + 2, start + 3);
-  }
-  const geo = new T.BufferGeometry();
-  geo.setAttribute("position", new T.Float32BufferAttribute(positions, 3));
-  geo.setAttribute("uv", new T.Float32BufferAttribute(uv, 2));
-  geo.setIndex([...faces, ...sides]);
-  geo.addGroup(0, faces.length, 0);
-  geo.addGroup(faces.length, sides.length, 1);
-  geo.computeVertexNormals();
-  const facet = new T.MeshStandardMaterial({
-    map: tex,
-    emissiveMap: tex,
-    emissive: 0xffffff,
-    emissiveIntensity: 0.46,
-    metalness: 0.2,
-    roughness: 0.48,
-  });
-  const edge = metal(0x10458e, 0.4, 0.36);
-  edge.side = T.DoubleSide;
-  return mesh(scene, geo, [facet, edge]);
+  return points;
 }
-const head = crystalRelief(mark);
-head.position.set(0, 3.61, -0.12);
+const silhouettes = markOutline.map(([perimeter, ...holes]) => {
+  const shape = new T.Shape(contourPoints(perimeter));
+  shape.holes = holes.map((hole) => new T.Path(contourPoints(hole)));
+  return shape;
+});
+const logoGeo = new T.ExtrudeGeometry(silhouettes, {
+  depth: 0.18,
+  bevelEnabled: true,
+  bevelSize: 0.012,
+  bevelThickness: 0.018,
+  bevelSegments: 1,
+});
+const coords = logoGeo.attributes.position,
+  logoUV = logoGeo.attributes.uv;
+for (let i = 0; i < coords.count; i++)
+  logoUV.setXY(i, coords.getX(i) / 4.9 + 0.5, coords.getY(i) / 4.9 + 0.5);
+const face = new T.MeshStandardMaterial({
+  map: mark,
+  alphaTest: 0.3,
+  emissiveMap: mark,
+  emissive: 0xffffff,
+  emissiveIntensity: 0.4,
+  roughness: 0.42,
+  metalness: 0.2,
+});
+const head = mesh(scene, logoGeo, [face, metal(0x153f82, 0.44, 0.33)]);
+const headHeight = 4.17;
+head.scale.setScalar(1.3);
+head.position.set(0, headHeight, -0.12);
 head.rotation.x = -0.19;
 // Under the crystal plates the mantle comes to a dark beak. Each folded
 // cheek catches a different light, keeping the face legible between the arms.
@@ -351,109 +249,70 @@ maskGeo.setAttribute(
 maskGeo.computeVertexNormals();
 const shell = metal(0x102d61, 0.42, 0.35);
 shell.side = T.DoubleSide;
-mesh(head, maskGeo, shell);
-const mantleGeo = new T.LatheGeometry(
-  [
-    [0.1, 0],
-    [0.33, 0.2],
-    [0.5, 0.62],
-    [0.73, 1.2],
-    [0.83, 1.8],
-    [0.66, 2.18],
-    [0.1, 2.35],
-  ].map(([r, y]) => new T.Vector2(r, y)),
-  48,
-);
-const mantle = mesh(scene, mantleGeo, blue, 0, 0.13, -0.2);
-mantle.scale.z = 0.78;
+mesh(head, maskGeo, shell, 0, 0, -0.3);
+// Machined controller chassis with ports on both sides and stacked heat sinks.
+const hub = group(scene, 0, 0.12, -0.04);
+disc(hub, 0, 0.25, 0, 0.83, 0.46, graphite);
+box(hub, 0, 1.04, 0, 1.18, 1.54, 0.94, night);
+for (let i = 0; i < 6; i++)
+  box(hub, 0, 0.52 + i * 0.19, 0, 1.29, 0.095, 1.03, armor);
+box(hub, 0, 1.64, 0.46, 0.8, 0.17, 0.06, graphite);
+box(hub, 0, 1.64, 0.5, 0.54, 0.035, 0.025, cyan);
 
-// Closed, tapered tubes follow a spatial spline. Every ring moves as a unit,
-// with zero deflection at the root and dock so the attachment points stay seated.
-const arms = [];
-const skin = blue.clone();
-skin.vertexColors = true;
-skin.roughness = 0.3;
-skin.clearcoat = 0.62;
-function arm(points, start, end, phase, swing, suckers = false) {
-  const curve = new T.CatmullRomCurve3(points.map((p) => vec(...p)));
-  const rings = swing > 0.2 ? 140 : 72,
-    sides = 18,
-    frames = curve.computeFrenetFrames(rings, false);
-  const positions = [],
-    indices = [],
-    colors = [],
-    weights = [],
-    cups = [];
-  for (let i = 0; i <= rings; i++) {
-    const u = i / rings,
-      p = curve.getPointAt(u),
-      radius = end + (start - end) * (1 - u) ** 0.77;
-    for (let j = 0; j < sides; j++) {
-      const a = (tau * j) / sides;
-      const flute =
-        1 +
-        0.084 * Math.cos(a * 3 + u * 9 + phase) +
-        0.037 * Math.sin(a * 5 - u * 6);
-      const normal = frames.normals[i]
-        .clone()
-        .multiplyScalar(Math.cos(a))
-        .addScaledVector(frames.binormals[i], Math.sin(a));
-      const shade = 0.6 + 0.37 * (0.5 + 0.5 * normal.y);
-      colors.push(shade * 0.9, shade, 0.82 + 0.18 * shade);
-      const q = p
-        .clone()
-        .addScaledVector(frames.normals[i], radius * flute * Math.cos(a))
-        .addScaledVector(
-          frames.binormals[i],
-          radius * flute * 0.88 * Math.sin(a),
-        );
-      positions.push(q.x, q.y, q.z);
-      if (i < rings) {
-        const a = i * sides + j,
-          b = i * sides + ((j + 1) % sides);
-        indices.push(a, b, a + sides, b, b + sides, a + sides);
-      }
-    }
-    weights.push(swing * Math.sin(Math.PI * u) ** 1.5);
-    if (suckers && i % 3 === 0 && u > 0.42 && u < 0.84) {
-      // Two rows on the forward-facing skin, kept on their own moving ring.
-      const tangent = curve.getTangentAt(u);
-      const front = vec(0, 0.15, 1);
-      front.addScaledVector(tangent, -front.dot(tangent)).normalize();
-      const side = tangent.clone().cross(front);
-      for (const offset of [-0.35, 0.35]) {
-        const n = front.clone().addScaledVector(side, offset).normalize();
-        const at = p.clone().addScaledVector(n, radius * 0.9);
-        const cup = hoop(
-          scene,
-          at.x,
-          at.y,
-          at.z,
-          radius * 0.2,
-          radius * 0.049,
-          ice,
-        );
-        cup.quaternion.setFromUnitVectors(vec(0, 0, 1), n);
-        cups.push({ mesh: cup, i, at });
-      }
-    }
+const jackets = [
+  metal(0x254568, 0.22, 0.51),
+  metal(0x285ea0, 0.26, 0.45),
+  metal(0x374950, 0.24, 0.53),
+  metal(0x384e89, 0.29, 0.47),
+];
+// Tile one small woven sleeve texture on every jacket, with no extra geometry.
+const weaveSize = 32,
+  weavePixels = new Uint8Array(weaveSize * weaveSize * 4);
+for (let y = 0; y < weaveSize; y++)
+  for (let x = 0; x < weaveSize; x++) {
+    const over = (x + y) % 8 < 3,
+      under = (x - y + weaveSize) % 8 < 3;
+    const v = over ? 246 : under ? 218 : 185;
+    weavePixels.set([v, v, v, 255], 4 * (y * weaveSize + x));
   }
-  const geo = new T.BufferGeometry();
-  geo.setIndex(indices);
-  const attr = new T.Float32BufferAttribute(positions, 3);
-  attr.setUsage(T.DynamicDrawUsage);
-  geo.setAttribute("position", attr);
-  geo.setAttribute("color", new T.Float32BufferAttribute(colors, 3));
-  geo.computeVertexNormals();
-  mesh(scene, geo, skin).castShadow = true;
-  arms.push({
-    attr,
-    base: Float32Array.from(positions),
-    weights,
-    phase,
-    sides,
-    cups,
-  });
+const weave = new T.DataTexture(weavePixels, weaveSize, weaveSize);
+weave.wrapS = weave.wrapT = T.RepeatWrapping;
+weave.repeat.set(10, 2);
+weave.magFilter = T.LinearFilter;
+weave.minFilter = T.LinearMipmapLinearFilter;
+weave.generateMipmaps = true;
+weave.needsUpdate = true;
+for (const material of jackets) {
+  material.map = weave;
+  material.bumpMap = weave;
+  material.bumpScale = 0.012;
+}
+
+const socket = metal(0x495669, 0.72, 0.31),
+  boot = metal(0x172333, 0.14, 0.61);
+const collars = new T.CylinderGeometry(1, 1, 1, 12);
+const up = vec(0, 1, 0);
+function ferrule(parent, p, direction, radius, length, material) {
+  const part = mesh(parent, collars, material, p.x, p.y, p.z);
+  part.scale.set(radius, length, radius);
+  part.quaternion.setFromUnitVectors(up, direction);
+  return part;
+}
+function cable(parent, points, r, jacket) {
+  const curve = new T.CatmullRomCurve3(points.map((p) => vec(...p)));
+  const jacketGeo = new T.TubeGeometry(curve, 40, r, 10, false);
+  mesh(parent, jacketGeo, jacket).castShadow = true;
+  for (const u of [0, 1]) {
+    const tip = curve.getPointAt(u);
+    const direction = curve.getTangentAt(u).multiplyScalar(u ? -1 : 1);
+    const at = (d) => tip.clone().addScaledVector(direction, d * r);
+    ferrule(parent, at(0.3), direction, r * 1.6, r * 1.35, socket);
+    ferrule(parent, at(1.7), direction, r * 1.28, r * 1.9, boot);
+    for (const d of [1.15, 1.85, 2.55])
+      ferrule(parent, at(d), direction, r * 1.38, r * 0.21, armor);
+    ferrule(parent, at(3), direction, r * 1.12, r * 0.34, ice);
+  }
+  return curve;
 }
 const spots = [
   [-2.18, -2.24],
@@ -465,80 +324,132 @@ const spots = [
   [-1.11, 3.68],
   [1.11, 3.68],
 ];
-const routeDots = [],
-  packets = [],
-  wrists = [];
-function networkPanel(parent, sign) {
-  const panel = group(parent, sign * 0.68, 0.83, -0.16);
-  panel.rotation.y = sign * -0.33;
-  box(panel, 0, 0, 0, 0.76, 0.47, 0.034, metal(0x112945, 0.42, 0.22));
-  line(
-    panel,
-    [
-      [-0.38, -0.235, 0.023],
-      [0.38, -0.235, 0.023],
-      [0.38, 0.235, 0.023],
-      [-0.38, 0.235, 0.023],
-      [-0.38, -0.235, 0.023],
-    ],
-    0x649ddd,
-  );
-  box(panel, 0, -0.42, 0, 0.026, 0.34, 0.027, steel);
-  const pts = [
-    [-0.27, 0.04],
-    [-0.12, 0],
-    [0.015, 0.065],
-    [0.14, 0.15],
-    [0.23, -0.04],
-  ];
-  for (const [a, b] of [
-    [0, 1],
-    [1, 2],
-    [2, 3],
-    [2, 4],
-  ])
-    line(
-      panel,
-      [
-        [...pts[a], 0.032],
-        [...pts[b], 0.032],
-      ],
-      0x72acd6,
-    );
-  pts.forEach(([x, y], i) =>
-    oval(
-      panel,
-      x,
-      y,
-      0.038,
-      0.029,
-      0.029,
-      0.016,
-      flat([0xcfd9ed, 0x5ba6ff, 0xffad54, 0x65ddab, 0x65ddab][i]),
-    ),
-  );
-  packets.push(oval(panel, 0, 0, 0.064, 0.027, 0.027, 0.014, cyan));
-  routeDots.push(
-    oval(panel, 0.23, -0.04, 0.052, 0.034, 0.034, 0.014, lightGold),
-  );
+const cells = [];
+const ease = T.MathUtils.smoothstep;
+
+// Each cartridge contains a small synthetic network. Record the actual
+// traversal so the console can replay its checks at any export timestamp.
+function checkRoutes(index) {
+  const links = [[1], [2], index === 5 ? [] : [3], []];
+  const visited = new Set([0]),
+    order = [0];
+  for (const node of order)
+    for (const peer of links[node]) {
+      if (!visited.has(peer)) {
+        visited.add(peer);
+        order.push(peer);
+      }
+    }
+  return { order, reachable: visited.has(3) };
 }
+
+// Each bay has its own controller uplink, pull-out cartridge tray and build terminal.
+// The route curves around the cabinet to the keyboard, entirely inside that bay.
+function workcell(station, sign, index) {
+  const rack = group(station);
+  rack.rotation.y = -sign * 0.72;
+  box(rack, 0, 0.56, 0, 0.57, 1.08, 0.46, graphite);
+  box(rack, 0, 0.065, 0, 0.66, 0.1, 0.55, steel);
+  box(rack, 0, 1.1, 0, 0.62, 0.06, 0.51, armor);
+  disc(rack, 0, 1.145, 0, 0.12, 0.06, steel);
+  hoop(rack, 0, 1.17, 0, 0.08, 0.012, cyan).rotation.x = Math.PI / 2;
+  for (let slot = 0; slot < 5; slot++) {
+    const y = 0.24 + slot * 0.165;
+    box(rack, 0, y, 0.246, 0.48, 0.119, 0.051, armor);
+    box(rack, -0.056, y, 0.275, 0.27, 0.026, 0.012, night);
+    box(rack, 0.177, y, 0.277, 0.043, 0.023, 0.014, slot % 2 ? cyan : jobGreen);
+  }
+  const drawer = group(rack, 0, 0.6, 0.25);
+  box(drawer, 0, 0, 0, 0.48, 0.096, 0.16, steel);
+  box(drawer, 0, 0, 0.088, 0.2, 0.035, 0.025, jobAmber);
+
+  const console = group(station, sign * 1.11, 0, -0.16);
+  console.rotation.y = -sign * 0.3;
+  box(console, 0, 0.32, 0, 0.55, 0.59, 0.36, graphite);
+  box(console, 0, 0.54, 0.15, 0.84, 0.081, 0.51, steel);
+  box(console, -0.1, 0.588, 0.22, 0.42, 0.018, 0.21, night);
+  for (let row = 0; row < 3; row++)
+    box(console, -0.1, 0.601, 0.155 + row * 0.055, 0.34, 0.012, 0.018, armor);
+  const reader = box(console, 0.25, 0.6, 0.22, 0.16, 0.04, 0.16, night);
+  box(console, 0, 0.63, -0.09, 0.095, 0.18, 0.08, armor);
+  const monitor = group(console, 0, 0.92, -0.09);
+  box(monitor, 0, 0, 0, 0.94, 0.55, 0.065, armor);
+  box(monitor, 0, 0, 0.043, 0.86, 0.47, 0.025, night);
+  // Terminal header, task steps and progress are drawn on the physical screen.
+  box(monitor, -0.13, 0.158, 0.065, 0.48, 0.032, 0.012, cyan);
+  const trace = checkRoutes(index);
+  const nodes = [
+    [-0.3, 0],
+    [-0.12, -0.05],
+    [0.087, 0.05],
+    [0.29, -0.025],
+  ];
+  const ports = nodes.map(([x, y], i) => {
+    if (i > 0)
+      line(
+        monitor,
+        [
+          [...nodes[i - 1], 0.072],
+          [x, y, 0.072],
+        ],
+        0x6986a7,
+      );
+    return oval(monitor, x, y, 0.083, 0.035, 0.035, 0.014, armor);
+  });
+  box(monitor, 0, -0.16, 0.065, 0.72, 0.049, 0.012, graphite);
+  const progress = box(monitor, 0, -0.16, 0.078, 0.72, 0.042, 0.012, jobGreen);
+  const lamp = oval(console, 0.37, 0.59, -0.02, 0.04, 0.024, 0.04, jobAmber);
+
+  const route = new T.CatmullRomCurve3([
+    vec(-sign * 0.55, 0, 0.24),
+    vec(-sign * 0.44, 0, 0.65),
+    vec(sign * 0.15, 0, 0.88),
+    vec(sign * 0.76, 0, 0.82),
+    vec(sign * 1.07, 0, 0.52),
+  ]);
+  const routePts = route.getPoints(20);
+  line(
+    station,
+    routePts.map((v) => [v.x, 0.009, v.z]),
+    0x537598,
+    0.66,
+  );
+  for (let j = 1; j < routePts.length; j += 4) {
+    const pt = routePts[j];
+    box(station, pt.x, 0.012, pt.z, 0.075, 0.01, 0.04, ice);
+  }
+  box(station, sign * 0.53, 0.032, -0.18, 1.22, 0.048, 0.089, graphite);
+  return { route, drawer, progress, lamp, reader, sign, index, trace, ports };
+}
+
+const ceramic = metal(0x8194ad, 0.43, 0.38);
+const panelGeo = new T.OctahedronGeometry(1);
 for (let i = 0; i < spots.length; i++) {
   const [x, z] = spots[i],
     s = Math.sign(x),
     row = Math.floor(i / 2);
   const station = group(scene, x, 0.04, z);
-  disc(station, 0, 0.029, 0, 0.61, 0.056, night).receiveShadow = true;
-  hoop(station, 0, 0.061, 0, 0.55, 0.012, steel).rotation.x = Math.PI / 2;
-  const g = group(station, 0, 0.08, 0);
-  g.rotation.y = s * -0.18;
+  const cell = workcell(station, s, i);
+  const g = group(station);
+  const limbs = [];
+  let carried;
   for (const side of [-1, 1]) {
-    box(g, side * 0.105, 0.06, 0.035, 0.138, 0.12, 0.195, graphite);
-    box(g, side * 0.105, 0.23, 0, 0.116, 0.31, 0.13, armor);
+    const hip = group(g, side * 0.105, 0.39, 0);
+    box(hip, 0, -0.33, 0.035, 0.138, 0.12, 0.195, graphite);
+    box(hip, 0, -0.16, 0, 0.116, 0.31, 0.13, armor);
+    const shin = mesh(hip, panelGeo, ceramic, 0, -0.17, 0.072);
+    shin.scale.set(0.071, 0.13, 0.048);
+    box(hip, 0, -0.295, 0.116, 0.116, 0.042, 0.042, steel);
     const shoulder = group(g, side * 0.222, 0.7, 0);
     oval(shoulder, 0, -0.12, 0, 0.08, 0.19, 0.085, armor);
     oval(shoulder, side * 0.028, -0.26, 0.02, 0.057, 0.082, 0.062, graphite);
+    const pauldron = mesh(shoulder, panelGeo, ceramic, side * 0.015, -0.035, 0);
+    pauldron.scale.set(0.135, 0.105, 0.126);
+    box(shoulder, 0, -0.2, 0.06, 0.116, 0.071, 0.069, steel);
     shoulder.rotation.z = side * 0.16;
-    wrists.push({ shoulder, side, i });
+    if (side === 1)
+      carried = box(shoulder, 0, -0.3, 0.045, 0.18, 0.084, 0.09, jobAmber);
+    limbs.push({ shoulder, hip, side });
   }
   const torso = mesh(
     g,
@@ -549,194 +460,236 @@ for (let i = 0; i < spots.length; i++) {
     0,
   );
   torso.rotation.y = Math.PI / 6;
+  for (const side of [-1, 1]) {
+    const plate = mesh(g, panelGeo, ceramic, side * 0.09, 0.625, 0.148);
+    plate.scale.set(0.12, 0.108, 0.058);
+    plate.rotation.z = -side * 0.25;
+    oval(g, side * 0.16, 0.855, 0.015, 0.046, 0.084, 0.078, steel);
+  }
+  box(g, 0, 0.46, 0.15, 0.21, 0.052, 0.054, graphite);
+  box(g, 0, 0.465, 0.18, 0.068, 0.035, 0.018, steel);
   box(g, 0, 0.61, 0.164, 0.081, 0.029, 0.022, cyan);
   oval(g, 0, 0.85, 0, 0.188, 0.176, 0.15, graphite);
   box(g, 0, 0.863, 0.126, 0.24, 0.063, 0.05, night);
   box(g, 0, 0.87, 0.155, 0.183, 0.028, 0.012, cyan);
-  disc(g, 0, 1.055, 0, 0.111, 0.048, steel);
-  hoop(g, 0, 1.084, 0, 0.076, 0.013, cyan).rotation.x = Math.PI / 2;
+  // A ceramic brow overhangs the inset, illuminated visor.
+  box(g, 0, 0.928, 0.105, 0.267, 0.044, 0.095, ceramic);
+  box(g, 0, 0.798, 0.127, 0.116, 0.055, 0.055, armor);
   g.traverse((o) => {
     if (o.isMesh) o.castShadow = true;
   });
-  networkPanel(station, s);
-  const y = 1.205;
-  const paths = [
+  const y = 1.21;
+  const portY = 0.86 + row * 0.235;
+  const root = [s * 0.63, portY, (row - 1.5) * 0.19];
+  const uplink = cable(
+    scene,
     [
-      [s * 0.48, 2.35, -0.62],
-      [s * 1.12, 1.95, -1.32],
-      [x * 0.89, 2.15, z - 0.22],
+      root,
+      [s * 0.91, portY, root[2]],
+      [x * 0.58, 0.75 + row * 0.1, z * 0.49],
+      [x * 0.89, 1.49, z * 0.88],
+      [x, 1.51, z],
       [x, y, z],
     ],
-    [
-      [s * 0.51, 2.4, -0.19],
-      [s * 1.64, 1.65, -0.1],
-      [s * 2.85, 2.16, -0.55],
-      [s * 3.48, 1.96, -0.47],
-      [x, y, z],
-    ],
-    [
-      [s * 0.46, 2.18, 0.07],
-      [s * 1.14, 1.28, 0.56],
-      [s * 2.21, 1.61, 1.12],
-      [s * 2.67, 1.65, 1.43],
-      [x, y, z],
-    ],
-    [
-      [s * 0.34, 2.02, 0.25],
-      [s * 0.72, 1.07, 1.19],
-      [s * 1.58, 1.47, 2.1],
-      [s * 1.55, 1.36, 2.67],
-      [s * 1.14, 1.42, 3.32],
-      [x, y, z],
-    ],
-  ];
-  arm(paths[row], 0.38, 0.041, i * 0.84, 0.135, row >= 2);
-}
-for (const s of [-1, 1]) {
-  arm(
-    [
-      [s * 0.33, -0.84, 0.13],
-      [s * 2.15, -1.26, 2.72],
-      [s * 4.4, -0.88, 3.2],
-      [s * 5.72, -0.05, 2.12],
-      [s * 6.05, 1.12, 0.54],
-      [s * 5.62, 1.88, -0.26],
-      [s * 5.47, 2.31, -0.36],
-      [s * 5.76, 2.54, -0.42],
-      [s * 6.06, 2.42, -0.4],
-      [s * 6.04, 2.19, -0.38],
-      [s * 5.91, 2.2, -0.36],
-    ],
-    0.69,
-    0.008,
-    s * 0.8,
-    0.25,
+    0.066,
+    jackets[row],
   );
+  const dispatch = oval(scene, 0, 0, 0, 0.087, 0.087, 0.087, cyan);
+  cells.push({ ...cell, worker: g, limbs, carried, uplink, dispatch });
 }
-arm(
-  [
-    [0, -0.39, 0.1],
-    [-0.58, -1.05, 1.8],
-    [-0.22, -1.44, 3.15],
-    [0.53, -1.66, 3.84],
-    [0.27, -1.94, 4.72],
-    [-0.29, -1.85, 4.94],
-  ],
-  0.57,
-  0.012,
-  0.8,
-  0.14,
-);
-// A pair of fine curled feelers frames the face above the load-bearing arms.
-for (const s of [-1, 1]) {
-  arm(
-    [
-      [s * 0.43, 2.38, -0.1],
-      [s * 1.05, 2.12, 0.08],
-      [s * 1.62, 2.48, 0.05],
-      [s * 1.82, 2.96, -0.04],
-      [s * 1.62, 3.22, -0.06],
-      [s * 1.37, 3.14, -0.03],
-      [s * 1.37, 2.94, 0.03],
-      [s * 1.5, 2.94, 0.04],
-      [s * 1.49, 3.02, 0.06],
-    ],
-    0.205,
-    0.009,
-    s * 0.93,
-    0.095,
+// Rear partitions frame the room like the agent office. Its queue and
+// completion boards use the same job clocks as the workers on the floor.
+const boardCards = [];
+for (const side of [-1, 1]) {
+  const wall = group(scene, side * 3.15, 0.04, -3.46);
+  wall.rotation.y = (-side * Math.PI) / 4;
+  box(wall, 0, 0.99, 0, 3.35, 1.98, 0.113, armor);
+  box(wall, 0, 0.96, 0.075, 3.16, 1.67, 0.06, deck);
+  box(wall, 0, 2.0, 0, 3.4, 0.06, 0.18, steel);
+  box(wall, 0, 1.08, 0.12, 2.66, 1.22, 0.07, night);
+  for (let c = 0; c < 3; c++) {
+    box(
+      wall,
+      (c - 1) * 0.8,
+      1.48,
+      0.167,
+      0.62,
+      0.042,
+      0.025,
+      c === 2 ? jobGreen : ice,
+    );
+    box(wall, (c - 1) * 0.8, 1.01, 0.165, 0.71, 0.76, 0.026, graphite);
+  }
+  for (let i = 0; i < 4; i++) {
+    const card = box(
+      wall,
+      0,
+      0.75 + i * 0.167,
+      0.197,
+      0.5,
+      0.1,
+      0.035,
+      ceramic,
+    );
+    boardCards.push({ card, cell: cells[2 * i + (side > 0 ? 1 : 0)] });
+  }
+  // Underfloor trunk runs along the bevel with both ends on the chassis.
+  for (let i = 0; i < 2; i++)
+    cable(
+      scene,
+      [
+        [side * 0.7, -0.3, 6.15],
+        [side * 1.0, -0.5 - i * 0.13, 6.03],
+        [side * 2.54, -0.57 - i * 0.13, 4.56],
+        [side * 4.88, -0.5 - i * 0.13, 2.25],
+        [side * 5.18, -0.31, 1.71],
+      ],
+      0.072,
+      i ? jackets[1] : boot,
+    );
+}
+
+// Repeated fixed props share draw calls. Animated limbs and job indicators
+// keep their own transforms and materials.
+const moving = new Set([
+  head,
+  ...cells.flatMap((c) => [
+    c.worker,
+    c.drawer,
+    c.progress,
+    c.lamp,
+    c.reader,
+    c.dispatch,
+    ...c.ports,
+  ]),
+  ...boardCards.map((b) => b.card),
+]);
+function batchFixedProps() {
+  const batches = new Map();
+  scene.updateMatrixWorld(true);
+  function collect(object) {
+    if (moving.has(object)) return;
+    if (object.isMesh && !Array.isArray(object.material)) {
+      const key = [
+        object.geometry.uuid,
+        object.material.uuid,
+        object.castShadow,
+        object.receiveShadow,
+      ].join("/");
+      if (!batches.has(key)) batches.set(key, []);
+      batches.get(key).push(object);
+    }
+    object.children.forEach(collect);
+  }
+  collect(scene);
+  for (const matches of batches.values()) {
+    if (matches.length < 3) continue;
+    const [first] = matches;
+    const batch = new T.InstancedMesh(
+      first.geometry,
+      first.material,
+      matches.length,
+    );
+    batch.castShadow = first.castShadow;
+    batch.receiveShadow = first.receiveShadow;
+    matches.forEach((obj, i) => {
+      batch.setMatrixAt(i, obj.matrixWorld);
+      obj.removeFromParent();
+    });
+    scene.add(batch);
+  }
+}
+batchFixedProps();
+
+// One complete job: dispatch, pick up a cartridge, walk to the terminal,
+// load and run it, then return to the rack. Every pose is a function of time
+// so live playback and the exported loop use the same simulation.
+function updateCell(cell, seconds) {
+  const {
+    route,
+    sign,
+    index,
+    worker,
+    limbs,
+    carried,
+    progress,
+    drawer,
+    lamp,
+    reader,
+    dispatch,
+    uplink,
+  } = cell;
+  const clock = (seconds + index * 0.97) % 8;
+  const outward = ease(clock, 1.15, 3.25);
+  const returning = ease(clock, 5.55, 7.7);
+  const u = outward - returning;
+  const p = route.getPointAt(u);
+  const travel = Math.sin(Math.PI * outward) + Math.sin(Math.PI * returning);
+  const stride = Math.sin(u * tau * 3) * (clock < 5.55 ? 1 : -1);
+  worker.position.set(p.x, 0.016 + 0.044 * Math.abs(stride) * travel, p.z);
+  const rackYaw = sign * 1.9,
+    terminalYaw = sign * 3.07;
+  const walkingYaw = sign * (clock < 5.55 ? 1.36 : -1.62);
+  const idleYaw = T.MathUtils.lerp(rackYaw, terminalYaw, u);
+  const turn = Math.atan2(
+    Math.sin(walkingYaw - idleYaw),
+    Math.cos(walkingYaw - idleYaw),
   );
+  worker.rotation.y = idleYaw + turn * travel;
+  const atRack = ease(clock, 0.05, 0.42) * (1 - ease(clock, 0.89, 1.14));
+  const typing = ease(clock, 3.28, 3.68) * (1 - ease(clock, 5.14, 5.55));
+  worker.rotation.x = 0.092 * typing;
+  for (const { shoulder, hip, side } of limbs) {
+    hip.rotation.x = side * stride * travel * 0.67;
+    shoulder.rotation.x =
+      -side * stride * travel * 0.55 -
+      atRack * (side === 1 ? 1.28 : 0.4) -
+      typing * (1.09 + 0.25 * Math.sin(clock * tau * 2 + side * 1.6));
+    shoulder.rotation.z = side * (0.13 + 0.065 * typing);
+  }
+  carried.visible = clock >= 0.82 && clock < 3.55;
+  drawer.position.z = 0.25 + 0.18 * atRack;
+  reader.material = clock >= 3.55 && clock < 6.0 ? jobAmber : night;
+  const done = ease(clock, 3.55, 5.14) * (1 - ease(clock, 7.38, 7.94));
+  progress.scale.x = 0.72 * Math.max(0.001, done);
+  progress.position.x = -0.36 + progress.scale.x * 0.5;
+  const complete = clock >= 5.14 && clock < 7.38;
+  const result = cell.trace.reachable ? jobGreen : jobAmber;
+  progress.material = result;
+  lamp.material = complete
+    ? result
+    : clock >= 3.55 && clock < 5.14
+      ? cyan
+      : armor;
+  const checked = Math.floor(ease(clock, 3.55, 5.14) * cell.trace.order.length);
+  for (const [i, port] of cell.ports.entries()) {
+    const visit = cell.trace.order.indexOf(i);
+    port.material =
+      clock >= 3.55 && clock < 7.38 && visit >= 0 && visit < checked
+        ? cyan
+        : armor;
+    if (i === 3 && complete) port.material = result;
+  }
+  dispatch.visible = clock < 0.76;
+  if (dispatch.visible)
+    dispatch.position.copy(uplink.getPointAt(clock / 0.76)).y += 0.042;
 }
-const eyePos = [4.18, 4.3, -0.48];
-arm(
-  [
-    [0.55, 2.48, -0.29],
-    [1.48, 3.02, -0.81],
-    [2.54, 3.62, -0.83],
-    [3.62, 3.36, -0.68],
-    [4.11, 3.68, -0.52],
-    eyePos,
-  ],
-  0.213,
-  0.055,
-  4,
-  0.1,
-);
-aura(scene, 0xb07e30, 0.95, [eyePos[0], eyePos[1], eyePos[2] - 0.38]);
-const eye = group(scene, ...eyePos);
-eye.quaternion.copy(camera.quaternion);
-oval(eye, 0, 0, 0, 0.42, 0.42, 0.4, darkGlass);
-const gaze = group(eye);
-oval(gaze, 0, 0, 0.35, 0.19, 0.203, 0.076, gold);
-oval(gaze, 0, 0, 0.415, 0.128, 0.151, 0.045, lightGold);
-oval(gaze, 0, 0, 0.456, 0.034, 0.11, 0.012, flat(0x211933));
-oval(gaze, -0.057, 0.066, 0.461, 0.023, 0.023, 0.012, flat(0xfff2cd));
-const orbit = hoop(eye, 0, 0, 0, 0.58, 0.012, gold);
-orbit.rotation.x = 1.19;
-orbit.rotation.z = 0.34;
-const beam = line(scene, [eyePos, [0, 0, 0]], 0xffca70, 0.2);
 
 function draw(seconds) {
   const t = (seconds * tau) / 8;
-  head.position.y = 3.61 + 0.063 * Math.sin(t);
+  head.position.y = headHeight + 0.063 * Math.sin(t);
   head.rotation.y = 0.067 * Math.sin(t);
   head.rotation.z = 0.025 * Math.cos(t);
-  mantle.scale.x = 1 + 0.028 * Math.sin(t);
-  halo.rotation.z = 0.032 * Math.sin(t);
-  orbit.rotation.y = 0.45 * Math.sin(t);
-  orbit.rotation.x = 1.18 + 0.12 * Math.cos(t);
-  for (const { attr, base, weights, phase, sides, cups } of arms) {
-    const shifts = weights.map((w, i) => [
-      w * Math.sin(t + phase + i * 0.077),
-      w * 0.8 * Math.cos(t + phase + i * 0.105),
-    ]);
-    for (let i = 0; i < weights.length; i++) {
-      const [dx, dy] = shifts[i];
-      for (let j = 0; j < sides; j++) {
-        const k = (i * sides + j) * 3;
-        attr.array[k] = base[k] + dx;
-        attr.array[k + 1] = base[k + 1] + dy;
-      }
-    }
-    for (const { mesh, i, at } of cups)
-      mesh.position.set(at.x + shifts[i][0], at.y + shifts[i][1], at.z);
-    attr.needsUpdate = true;
+  for (const cell of cells) updateCell(cell, seconds);
+  for (const { card, cell } of boardCards) {
+    const clock = (seconds + cell.index * 0.97) % 8;
+    card.position.x =
+      -0.8 +
+      0.8 *
+        (ease(clock, 1.0, 1.4) +
+          ease(clock, 5.1, 5.45) -
+          2 * ease(clock, 7.48, 7.97));
   }
-  const index = Math.floor(seconds) % spots.length,
-    pulse = Math.sin(Math.PI * (seconds % 1)) ** 2;
-  const [x, z] = spots[index],
-    target = x + Math.sign(x) * 0.68;
-  // Slew to the next monitor while the old beam is dimming.
-  const [nextX, nextZ] = spots[(index + 1) % spots.length];
-  const slew = T.MathUtils.smoothstep(seconds % 1, 0.72, 1);
-  const lookX = T.MathUtils.lerp(x, nextX, slew),
-    lookZ = T.MathUtils.lerp(z, nextZ, slew);
-  gaze.rotation.y = (lookX - eyePos[0]) * 0.075;
-  gaze.rotation.x = 0.3 - lookZ * 0.035;
-  for (const { shoulder, side, i } of wrists) {
-    shoulder.rotation.z = side * (0.18 + 0.065 * Math.sin(2 * t + i));
-    shoulder.rotation.x = -0.12 - 0.19 * (1 + Math.sin(2 * t + i + side));
-  }
-  packets.forEach((dot, i) => {
-    const u = (seconds / 2 + i * 0.17) % 1;
-    const route = [
-      [-0.27, 0.04],
-      [-0.12, 0],
-      [0.015, 0.065],
-      i % 2 ? [0.14, 0.15] : [0.23, -0.04],
-    ];
-    const k = Math.floor(u * 3),
-      f = u * 3 - k;
-    dot.position.x = T.MathUtils.lerp(route[k][0], route[k + 1][0], f);
-    dot.position.y = T.MathUtils.lerp(route[k][1], route[k + 1][1], f);
-  });
-  beam.geometry.attributes.position.setXYZ(1, target, 0.9, z - 0.16);
-  beam.geometry.attributes.position.needsUpdate = true;
-  beam.frustumCulled = false;
-  beam.material.opacity = pulse * 0.42;
-  routeDots.forEach((o, i) => {
-    o.visible = i === index && pulse > 0.15;
-  });
   renderer.render(scene, camera);
 }
 function resize() {

@@ -4,6 +4,7 @@ export function serve() {
   const routes = {
     "/": "index.html",
     "/scene.js": "scene.js",
+    "/mark-outline.js": "mark-outline.js",
     "/mark.webp": "../assets/tentaflake-mark.webp",
     "/three.module.js": "node_modules/three/build/three.module.js",
     "/three.core.js": "node_modules/three/build/three.core.js",

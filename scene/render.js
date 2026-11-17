@@ -8,51 +8,78 @@ import { serve } from "./serve.js";
 const server = serve();
 const assets = fileURLToPath(new URL("../assets/", import.meta.url));
 const dir = await mkdtemp(join(assets, ".tentaflake-frames-"));
-let browser;
-try {
-  browser = await chromium.launch({
+async function renderFrames(files, end) {
+  const browser = await chromium.launch({
     executablePath:
       Bun.which("chromium", { PATH: process.env.PATH }) ?? "chromium",
     args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
   });
-  const page = await browser.newPage({
-    viewport: { width: 960, height: 720 },
-    deviceScaleFactor: 1,
-  });
-  page.on("pageerror", (e) => console.error(e));
-  await page.goto(server.url.href + "?capture");
-  await page.waitForFunction(() => typeof window.renderFrame === "function");
-  // Capture the fixed layout once. Read each WebGL frame synchronously
-  // after rendering, before the browser clears its drawing buffer.
-  await page.locator("canvas").evaluate((c) => (c.style.visibility = "hidden"));
-  const backdrop = await page.screenshot();
-  await page
-    .locator("canvas")
-    .evaluate((c) => (c.style.visibility = "visible"));
-  const composite = await page.evaluateHandle(async (base64) => {
-    const bg = new Image();
-    bg.src = "data:image/png;base64," + base64;
-    await bg.decode();
-    const canvas = document.createElement("canvas");
-    canvas.width = bg.width;
-    canvas.height = bg.height;
-    return {
-      bg,
-      ctx: canvas.getContext("2d"),
-      scene: document.querySelector("canvas"),
-    };
-  }, backdrop.toString("base64"));
+  try {
+    const page = await browser.newPage({
+      viewport: { width: 960, height: 720 },
+      deviceScaleFactor: 1,
+    });
+    page.on("pageerror", (e) => console.error(e));
+    await page.goto(server.url.href + "?capture");
+    await page.waitForFunction(() => typeof window.renderFrame === "function");
+    // Capture the fixed layout once. Read each WebGL frame synchronously
+    // after rendering, before the browser clears its drawing buffer.
+    await page
+      .locator("canvas")
+      .evaluate((c) => (c.style.visibility = "hidden"));
+    const backdrop = await page.screenshot();
+    await page
+      .locator("canvas")
+      .evaluate((c) => (c.style.visibility = "visible"));
+    const composite = await page.evaluateHandle(async (base64) => {
+      const bg = new Image();
+      bg.src = "data:image/png;base64," + base64;
+      await bg.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = bg.width;
+      canvas.height = bg.height;
+      return {
+        bg,
+        ctx: canvas.getContext("2d"),
+        scene: document.querySelector("canvas"),
+      };
+    }, backdrop.toString("base64"));
+    for (let frame = files.length; frame < end; frame++) {
+      const png = await composite.evaluate(({ bg, ctx, scene }, seconds) => {
+        window.renderFrame(seconds);
+        ctx.drawImage(bg, 0, 0);
+        ctx.drawImage(scene, 0, 0);
+        return ctx.canvas.toDataURL("image/png").split(",")[1];
+      }, frame / 20);
+      const path = join(dir, `frame-${String(frame).padStart(3, "0")}.png`);
+      await Bun.write(path, Buffer.from(png, "base64"));
+      files.push(path);
+    }
+  } finally {
+    await browser.close();
+  }
+}
+
+try {
+  // Keep software WebGL allocations bounded during a multi-frame export.
   const files = [];
-  for (let frame = 0; frame < 160; frame++) {
-    const png = await composite.evaluate(({ bg, ctx, scene }, seconds) => {
-      window.renderFrame(seconds);
-      ctx.drawImage(bg, 0, 0);
-      ctx.drawImage(scene, 0, 0);
-      return ctx.canvas.toDataURL("image/png").split(",")[1];
-    }, frame / 20);
-    const path = join(dir, `frame-${String(frame).padStart(3, "0")}.png`);
-    await Bun.write(path, Buffer.from(png, "base64"));
-    files.push(path);
+  let stalls = 0;
+  while (files.length < 160) {
+    const first = files.length;
+    try {
+      await renderFrames(files, Math.min(first + 24, 160));
+      stalls = 0;
+    } catch (error) {
+      if (
+        !/Target .*closed|browser has been closed|Target crashed/i.test(
+          error.message,
+        )
+      )
+        throw error;
+      stalls = files.length === first ? stalls + 1 : 0;
+      if (stalls >= 3) throw error;
+      console.warn(`Chromium closed. Resuming at frame ${files.length}.`);
+    }
   }
   const encode = async (args) => {
     const proc = Bun.spawn(
@@ -98,7 +125,6 @@ try {
     join(assets, "tentaflake-banner.webp"),
   );
 } finally {
-  await browser?.close();
   server.stop(true);
   await rm(dir, { recursive: true, force: true });
 }

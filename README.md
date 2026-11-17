@@ -24,11 +24,11 @@ I build AI agents and the systems around them:
 <a href="https://github.com/timfewi/tentaflake">
   <picture>
     <source media="(prefers-reduced-motion: reduce)" srcset="./assets/tentaflake-poster.webp" />
-    <img src="./assets/tentaflake-banner.webp" width="100%" alt="Tentaflake's crystal kraken reaches eight agents on an isometric host. Network packets move across their monitors as an amber evaluator eye checks each isolated network in turn." />
+    <img src="./assets/tentaflake-banner.webp" width="100%" alt="Data cables connect the Tentaflake controller to eight racks on a three-dimensional operations floor. Each agent collects a cartridge from its server rack, walks to a console and checks a network route." />
   </picture>
 </a>
 
-<sub>Three.js illustration with synthetic runs. The crystal kraken represents the harness and the amber eye represents the independent evaluator.</sub>
+<sub>Three.js illustration of Tentaflake as the infrastructure controller. At each workstation, an agent loads a cartridge and checks reachability on a simulated network.</sub>
 
 ## How I test agent work
 
