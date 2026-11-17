@@ -21,16 +21,16 @@ I build AI agents and the systems around them:
 - **The environments they run in:** NixOS hosts, isolated runtimes, routing, firewalls and controlled egress.
 - **Checks on their work:** reproducible tasks, with results checked by a separate evaluator.
 
+## How I test agent work
+
 <a href="https://github.com/timfewi/tentaflake">
   <picture>
-    <source media="(max-width: 600px)" srcset="./assets/tentaflake-banner-narrow.svg" />
-    <img src="./assets/tentaflake-banner.svg" width="100%" alt="Tentaflake: isolated AI agents, declarative infrastructure. NixOS, gVisor, Rust. Illustration: the original Tentaflake logo, a blue octopus within crystal arms, floats over the glowing core of one dark host base. Tentacle cables run from the core to four separate platforms on that base, each inside a faint box with one agent; no cable joins two agents. Larger tentacles reach around the base from below, and a small panel labelled tentaflake.toml sends a cable into the core." />
+    <source media="(max-width: 600px)" srcset="./assets/agent-harness-narrow.svg" />
+    <img src="./assets/agent-harness.svg" width="100%" alt="The Tentaflake crystal kraken connects eight armoured agents on an isometric platform. Each works on the same routing task in its own network. An amber evaluator eye checks web access and admin isolation." />
   </picture>
 </a>
 
-<sub>Illustration, not a live host: one NixOS host, one sandbox per agent, all declared in <code>tentaflake.toml</code>. Logo from <a href="https://github.com/timfewi/tentaflake">Tentaflake</a>.</sub>
-
-## How I test agent work
+<sub>Illustration with synthetic runs and outcomes. The crystal kraken represents the harness. Its amber eye represents the independent evaluator.</sub>
 
 One task from a private benchmark I use to compare agent harnesses: **repair routing and firewall.** The agent investigates an isolated Linux network and submits a corrected configuration. A separate evaluator then checks the result from outside the agent's run: one service must be reachable, another must stay blocked.
 
