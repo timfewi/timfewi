@@ -21,14 +21,12 @@ I build AI agents and the systems around them:
 - **The environments they run in:** NixOS hosts, isolated runtimes, routing, firewalls and controlled egress.
 - **Checks on their work:** reproducible tasks, with results checked by a separate evaluator.
 
-## How I test agent work
-
 <picture>
   <source media="(max-width: 600px)" srcset="./assets/agent-harness-narrow.svg" />
-  <img src="./assets/agent-harness.svg" width="100%" alt="Illustration with synthetic data: a dark isometric platform floats above a blue glow. From a shaft in its centre rises Tentaflake as a giant crystal kraken whose head is the Tentaflake mark itself, with two glowing drops as eyes and a beard of tentacles below. Its arms dock from above on eight dark, armoured agents, one arm holds the evaluator's amber eye aloft, and larger arms reach around the platform from below. Each agent stands on its own pad beside a hologram of its isolated Linux network with a client, a router, a firewall and the services web and admin. The eye probes each network in turn; lamps show whether web is reachable and admin is blocked. The task reads 'repair routing and firewall'. The outcomes are invented for the picture." />
+  <img src="./assets/agent-harness.svg" width="100%" alt="How I test agent work. Same task. Isolated runs. Independent checks. Illustration: the Tentaflake mark hovers over a small plinth and stands for the harness. One blue line runs from it to each of four identical agents. Every agent stands on its own separate platform with a drawing of its isolated Linux network. No line joins two agents. On the right a golden eye, the independent evaluator, floats apart with no line to the harness." />
 </picture>
 
-<sub>Illustration with synthetic runs and outcomes, not a recording or a live run. The kraken stands for the harness and is drawn after <a href="https://github.com/timfewi/tentaflake">Tentaflake</a>: its arms hold every agent and the evaluator's eye. Each agent run is isolated, and the evaluator checks each network from outside the agent's run; the shared platform only shows that every agent gets the same task and the same checks. No scores or rankings are shown.</sub>
+<sub>Illustration, not a recording or a result. The mark is the <a href="https://github.com/timfewi/tentaflake">Tentaflake</a> logo and stands for the harness here. No scores or rankings are shown.</sub>
 
 One task from a private benchmark I use to compare agent harnesses: **repair routing and firewall.** The agent investigates an isolated Linux network and submits a corrected configuration. A separate evaluator then checks the result from outside the agent's run: one service must be reachable, another must stay blocked.
 
