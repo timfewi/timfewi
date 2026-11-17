@@ -259,12 +259,11 @@ for (let i = 0; i < 6; i++)
 box(hub, 0, 1.64, 0.46, 0.8, 0.17, 0.06, graphite);
 box(hub, 0, 1.64, 0.5, 0.54, 0.035, 0.025, cyan);
 
-const jackets = [
-  metal(0x254568, 0.22, 0.51),
-  metal(0x285ea0, 0.26, 0.45),
-  metal(0x374950, 0.24, 0.53),
-  metal(0x384e89, 0.29, 0.47),
-];
+const cobalt = new T.Color(0x184bc0),
+  azure = new T.Color(0x328aef),
+  frost = new T.Color(0x91dfff);
+const jacket = metal(0xffffff, 0.39, 0.29);
+jacket.vertexColors = true;
 // Tile one small woven sleeve texture on every jacket, with no extra geometry.
 const weaveSize = 32,
   weavePixels = new Uint8Array(weaveSize * weaveSize * 4);
@@ -282,37 +281,69 @@ weave.magFilter = T.LinearFilter;
 weave.minFilter = T.LinearMipmapLinearFilter;
 weave.generateMipmaps = true;
 weave.needsUpdate = true;
-for (const material of jackets) {
-  material.map = weave;
-  material.bumpMap = weave;
-  material.bumpScale = 0.012;
-}
+jacket.map = weave;
+jacket.bumpMap = weave;
+jacket.bumpScale = 0.006;
 
 const socket = metal(0x495669, 0.72, 0.31),
   boot = metal(0x172333, 0.14, 0.61);
 const collars = new T.CylinderGeometry(1, 1, 1, 12);
-const up = vec(0, 1, 0);
+const up = vec(0, 1, 0),
+  forward = vec(0, 0, 1);
 function ferrule(parent, p, direction, radius, length, material) {
   const part = mesh(parent, collars, material, p.x, p.y, p.z);
   part.scale.set(radius, length, radius);
   part.quaternion.setFromUnitVectors(up, direction);
   return part;
 }
-function cable(parent, points, r, jacket) {
+// Like the office illustration, each lead has a full shoulder at the hub
+// and tapers into its plug. The fibre highlight follows the round sleeve.
+function cable(parent, points, rootRadius, tipRadius) {
   const curve = new T.CatmullRomCurve3(points.map((p) => vec(...p)));
-  const jacketGeo = new T.TubeGeometry(curve, 40, r, 10, false);
-  mesh(parent, jacketGeo, jacket).castShadow = true;
+  const radiusAt = (u) => tipRadius + (rootRadius - tipRadius) * (1 - u) ** 1.5;
+  const rings = 48,
+    sides = 16;
+  const geo = new T.TubeGeometry(curve, rings, 1, sides, false);
+  const centers = curve.getSpacedPoints(rings);
+  const pos = geo.attributes.position,
+    normals = geo.attributes.normal;
+  const colors = [],
+    color = new T.Color();
+  for (let i = 0; i <= rings; i++) {
+    const u = i / rings,
+      center = centers[i],
+      radius = radiusAt(u);
+    for (let j = 0; j <= sides; j++) {
+      const k = i * (sides + 1) + j;
+      const nx = normals.getX(k),
+        ny = normals.getY(k),
+        nz = normals.getZ(k);
+      pos.setXYZ(
+        k,
+        center.x + nx * radius,
+        center.y + ny * radius,
+        center.z + nz * radius,
+      );
+      const light = Math.max(0, -0.52 * nx + 0.79 * ny + 0.32 * nz);
+      color
+        .copy(cobalt)
+        .lerp(azure, 0.62 * light)
+        .lerp(frost, 0.7 * light ** 8);
+      colors.push(color.r, color.g, color.b);
+    }
+  }
+  geo.setAttribute("color", new T.Float32BufferAttribute(colors, 3));
+  mesh(parent, geo, jacket).castShadow = true;
   for (const u of [0, 1]) {
-    const tip = curve.getPointAt(u);
+    const tip = centers[u * rings],
+      r = radiusAt(u);
     const direction = curve.getTangentAt(u).multiplyScalar(u ? -1 : 1);
     const at = (d) => tip.clone().addScaledVector(direction, d * r);
-    ferrule(parent, at(0.3), direction, r * 1.6, r * 1.35, socket);
-    ferrule(parent, at(1.7), direction, r * 1.28, r * 1.9, boot);
-    for (const d of [1.15, 1.85, 2.55])
-      ferrule(parent, at(d), direction, r * 1.38, r * 0.21, armor);
-    ferrule(parent, at(3), direction, r * 1.12, r * 0.34, ice);
+    ferrule(parent, at(0.18), direction, r * 1.17, r * 0.55, socket);
+    ferrule(parent, at(0.69), direction, r * 1.06, r * 0.65, boot);
+    ferrule(parent, at(0.94), direction, r * 1.1, r * 0.16, ice);
   }
-  return curve;
+  return { curve, radiusAt };
 }
 const spots = [
   [-2.18, -2.24],
@@ -479,22 +510,22 @@ for (let i = 0; i < spots.length; i++) {
     if (o.isMesh) o.castShadow = true;
   });
   const y = 1.21;
-  const portY = 0.86 + row * 0.235;
-  const root = [s * 0.63, portY, (row - 1.5) * 0.19];
+  const portY = row % 2 === 0 ? 1.76 : 1.11;
+  const root = [s * 0.64, portY, row < 2 ? -0.36 : 0.34];
   const uplink = cable(
     scene,
     [
       root,
-      [s * 0.91, portY, root[2]],
-      [x * 0.58, 0.75 + row * 0.1, z * 0.49],
-      [x * 0.89, 1.49, z * 0.88],
-      [x, 1.51, z],
+      [s * 1.14, portY - 0.04, root[2]],
+      [s * (Math.abs(x) * 0.66 + 0.16), 1.03 + row * 0.08, z * 0.45],
+      [x * 0.9, 1.62, z * 0.84],
+      [x, 1.52, z],
       [x, y, z],
     ],
-    0.066,
-    jackets[row],
+    0.255,
+    0.118,
   );
-  const dispatch = oval(scene, 0, 0, 0, 0.087, 0.087, 0.087, cyan);
+  const dispatch = hoop(scene, 0, 0, 0, 1, 0.095, cyan);
   cells.push({ ...cell, worker: g, limbs, carried, uplink, dispatch });
 }
 // Rear partitions frame the room like the agent office. Its queue and
@@ -534,19 +565,18 @@ for (const side of [-1, 1]) {
     boardCards.push({ card, cell: cells[2 * i + (side > 0 ? 1 : 0)] });
   }
   // Underfloor trunk runs along the bevel with both ends on the chassis.
-  for (let i = 0; i < 2; i++)
-    cable(
-      scene,
-      [
-        [side * 0.7, -0.3, 6.15],
-        [side * 1.0, -0.5 - i * 0.13, 6.03],
-        [side * 2.54, -0.57 - i * 0.13, 4.56],
-        [side * 4.88, -0.5 - i * 0.13, 2.25],
-        [side * 5.18, -0.31, 1.71],
-      ],
-      0.072,
-      i ? jackets[1] : boot,
-    );
+  cable(
+    scene,
+    [
+      [side * 0.7, -0.3, 6.15],
+      [side * 1.0, -0.58, 6.03],
+      [side * 2.54, -0.68, 4.56],
+      [side * 4.88, -0.58, 2.25],
+      [side * 5.18, -0.31, 1.71],
+    ],
+    0.155,
+    0.13,
+  );
 }
 
 // Repeated fixed props share draw calls. Animated limbs and job indicators
@@ -671,8 +701,15 @@ function updateCell(cell, seconds) {
     if (i === 3 && complete) port.material = result;
   }
   dispatch.visible = clock < 0.76;
-  if (dispatch.visible)
-    dispatch.position.copy(uplink.getPointAt(clock / 0.76)).y += 0.042;
+  if (dispatch.visible) {
+    const u = clock / 0.76;
+    dispatch.position.copy(uplink.curve.getPointAt(u));
+    dispatch.quaternion.setFromUnitVectors(
+      forward,
+      uplink.curve.getTangentAt(u),
+    );
+    dispatch.scale.setScalar(uplink.radiusAt(u) * 1.035);
+  }
 }
 
 function draw(seconds) {
