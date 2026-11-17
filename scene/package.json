@@ -1,0 +1,15 @@
+{
+  "name": "tentaflake-profile-scene",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "preview": "bun serve.js",
+    "render": "bun render.js"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.65.1"
+  }
+}

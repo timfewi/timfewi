@@ -23,10 +23,12 @@ I build AI agents and the systems around them:
 
 <a href="https://github.com/timfewi/tentaflake">
   <picture>
-    <source media="(prefers-reduced-motion: reduce)" srcset="./assets/tentaflake-banner.webp" />
-    <img src="./assets/tentaflake-banner.svg" width="100%" alt="Tentaflake. Isolated AI agents. Declarative infrastructure. NixOS, gVisor, Rust. A blue crystal kraken connects four agents in glass enclosures beside a tentaflake.toml panel." />
+    <source media="(prefers-reduced-motion: reduce)" srcset="./assets/tentaflake-poster.webp" />
+    <img src="./assets/tentaflake-banner.webp" width="100%" alt="Tentaflake's crystal kraken reaches eight agents on an isometric host. Network packets move across their monitors as an amber evaluator eye checks each isolated network in turn." />
   </picture>
 </a>
+
+<sub>Three.js illustration with synthetic runs. The crystal kraken represents the harness and the amber eye represents the independent evaluator.</sub>
 
 ## How I test agent work
 
